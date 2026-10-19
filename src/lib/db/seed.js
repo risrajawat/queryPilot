@@ -5,10 +5,12 @@ export const seedData = {
     { id: 3, name: 'Outdoor', slug: 'outdoor' },
   ],
   customers: [
-    { id: 1, email: 'maya.chen@example.com', first_name: 'Maya', last_name: 'Chen', phone: '415-555-0101', city: 'San Francisco' },
-    { id: 2, email: 'jordan.rivera@example.com', first_name: 'Jordan', last_name: 'Rivera', phone: '512-555-0102', city: 'Austin' },
-    { id: 3, email: 'sam.taylor@example.com', first_name: 'Sam', last_name: 'Taylor', phone: '312-555-0103', city: 'Chicago' },
-    { id: 4, email: 'olivia.wilson@example.com', first_name: 'Olivia', last_name: 'Wilson', phone: '206-555-0104', city: 'Seattle' },
+    { id: 1, email: 'maya.chen@example.com', first_name: 'Maya', last_name: 'Chen', phone: '415-555-0101', city: 'San Francisco', country: 'US' },
+    { id: 2, email: 'jordan.rivera@example.com', first_name: 'Jordan', last_name: 'Rivera', phone: '512-555-0102', city: 'Austin', country: 'US' },
+    { id: 3, email: 'sam.taylor@example.com', first_name: 'Sam', last_name: 'Taylor', phone: '312-555-0103', city: 'Chicago', country: 'US' },
+    { id: 4, email: 'olivia.wilson@example.com', first_name: 'Olivia', last_name: 'Wilson', phone: '206-555-0104', city: 'Seattle', country: 'US' },
+    { id: 5, email: 'aisha.khan@example.com', first_name: 'Aisha', last_name: 'Khan', phone: '+91-555-0105', city: 'Bengaluru', country: 'IN' },
+    { id: 6, email: 'liam.morgan@example.com', first_name: 'Liam', last_name: 'Morgan', phone: '+44-555-0106', city: 'Manchester', country: 'GB' },
   ],
   products: [
     { id: 1, category_id: 1, sku: 'AUDIO-100', name: 'Wireless Headphones', description: 'Noise-cancelling over-ear headphones', price_cents: 12999, stock_quantity: 42 },
@@ -20,10 +22,12 @@ export const seedData = {
   ],
   orders: [
     { id: 1001, customer_id: 1, status: 'delivered', subtotal_cents: 17998, tax_cents: 1620, shipping_cents: 0, total_cents: 19618, ordered_at: '2025-01-08T14:22:00Z', shipped_at: '2025-01-10T09:00:00Z' },
-    { id: 1002, customer_id: 2, status: 'shipped', subtotal_cents: 12898, tax_cents: 1032, shipping_cents: 599, total_cents: 14529, ordered_at: '2025-01-16T18:05:00Z', shipped_at: '2025-01-18T11:30:00Z' },
-    { id: 1003, customer_id: 3, status: 'paid', subtotal_cents: 7999, tax_cents: 800, shipping_cents: 0, total_cents: 8799, ordered_at: '2025-01-21T10:10:00Z', shipped_at: null },
-    { id: 1004, customer_id: 1, status: 'cancelled', subtotal_cents: 3299, tax_cents: 297, shipping_cents: 599, total_cents: 4195, ordered_at: '2025-01-24T16:40:00Z', shipped_at: null },
-    { id: 1005, customer_id: 4, status: 'processing', subtotal_cents: 17998, tax_cents: 1620, shipping_cents: 0, total_cents: 19618, ordered_at: '2025-01-27T08:15:00Z', shipped_at: null },
+    { id: 1002, customer_id: 2, status: 'shipped', subtotal_cents: 12898, tax_cents: 1032, shipping_cents: 599, total_cents: 14529, ordered_at: '2025-02-16T18:05:00Z', shipped_at: '2025-02-18T11:30:00Z' },
+    { id: 1003, customer_id: 3, status: 'paid', subtotal_cents: 7999, tax_cents: 800, shipping_cents: 0, total_cents: 8799, ordered_at: '2025-03-21T10:10:00Z', shipped_at: null },
+    { id: 1004, customer_id: 1, status: 'cancelled', subtotal_cents: 3299, tax_cents: 297, shipping_cents: 599, total_cents: 4195, ordered_at: '2025-04-24T16:40:00Z', shipped_at: null },
+    { id: 1005, customer_id: 4, status: 'processing', subtotal_cents: 17998, tax_cents: 1620, shipping_cents: 0, total_cents: 19618, ordered_at: '2025-05-27T08:15:00Z', shipped_at: null },
+    { id: 1006, customer_id: 1, status: 'delivered', subtotal_cents: 7999, tax_cents: 720, shipping_cents: 0, total_cents: 8719, ordered_at: '2025-06-12T12:30:00Z', shipped_at: '2025-06-14T09:00:00Z' },
+    { id: 1007, customer_id: 5, status: 'delivered', subtotal_cents: 8999, tax_cents: 900, shipping_cents: 599, total_cents: 10498, ordered_at: '2025-07-03T07:45:00Z', shipped_at: '2025-07-05T09:15:00Z' },
   ],
   order_items: [
     { id: 1, order_id: 1001, product_id: 1, quantity: 1, unit_price_cents: 12999 },
@@ -33,6 +37,8 @@ export const seedData = {
     { id: 5, order_id: 1003, product_id: 4, quantity: 1, unit_price_cents: 7999 },
     { id: 6, order_id: 1004, product_id: 6, quantity: 1, unit_price_cents: 3299 },
     { id: 7, order_id: 1005, product_id: 5, quantity: 2, unit_price_cents: 8999 },
+    { id: 8, order_id: 1006, product_id: 4, quantity: 1, unit_price_cents: 7999 },
+    { id: 9, order_id: 1007, product_id: 5, quantity: 1, unit_price_cents: 8999 },
   ],
   payments: [
     { id: 1, order_id: 1001, provider: 'stripe', provider_reference: 'pi_demo_1001', amount_cents: 19617, status: 'captured', paid_at: '2025-01-08T14:23:00Z' },
@@ -40,5 +46,7 @@ export const seedData = {
     { id: 3, order_id: 1003, provider: 'stripe', provider_reference: 'pi_demo_1003', amount_cents: 8799, status: 'captured', paid_at: '2025-01-21T10:11:00Z' },
     { id: 4, order_id: 1004, provider: 'stripe', provider_reference: 'pi_demo_1004', amount_cents: 4195, status: 'refunded', paid_at: '2025-01-24T16:41:00Z' },
     { id: 5, order_id: 1005, provider: 'stripe', provider_reference: 'pi_demo_1005', amount_cents: 19618, status: 'authorized', paid_at: null },
+    { id: 6, order_id: 1006, provider: 'stripe', provider_reference: 'pi_demo_1006', amount_cents: 8719, status: 'captured', paid_at: '2025-06-12T12:31:00Z' },
+    { id: 7, order_id: 1007, provider: 'stripe', provider_reference: 'pi_demo_1007', amount_cents: 10498, status: 'captured', paid_at: '2025-07-03T07:46:00Z' },
   ],
 };

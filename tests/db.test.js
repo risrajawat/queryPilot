@@ -16,13 +16,15 @@ describe('database foundation', () => {
     database = createDatabase();
     seedDatabase(database);
     seedDatabase(database);
-    expect(database.prepare('SELECT COUNT(*) AS count FROM customers').get().count).toBe(4);
-    expect(database.prepare('SELECT COUNT(*) AS count FROM orders').get().count).toBe(5);
-    expect(database.prepare('SELECT COUNT(*) AS count FROM payments').get().count).toBe(5);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM customers').get().count).toBe(6);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM orders').get().count).toBe(7);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM payments').get().count).toBe(7);
     const total = database.prepare('SELECT total_cents FROM orders WHERE id = 1001').get().total_cents;
     const itemTotal = database.prepare('SELECT SUM(quantity * unit_price_cents) AS total FROM order_items WHERE order_id = 1001').get().total;
     expect(itemTotal).toBe(17998);
     expect(total).toBe(19618);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM customers WHERE id NOT IN (SELECT customer_id FROM orders)').get().count).toBe(1);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM orders WHERE customer_id = 1').get().count).toBe(3);
   });
 
   it('enforces foreign-key relationships', () => {
