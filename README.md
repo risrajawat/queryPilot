@@ -1,6 +1,6 @@
 # QueryPilot
 
-Phase 6 adds concise natural-language explanations on top of the verified Phase 5 result. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, produces validated SQLite `SELECT` queries, executes only resolved generated queries, and explains only the returned columns and rows. SQL is never accepted from the browser.
+Phase 7A adds a deterministic synthetic commerce dataset and a read-only Database Explorer for the jury demo. QueryPilot tracks conversation state, analyzes intents, asks deterministic clarifying questions, produces validated SQLite `SELECT` queries, executes only resolved generated queries, and explains only the returned columns and rows. SQL is never accepted from the browser.
 
 ## Setup
 
@@ -14,6 +14,8 @@ npm run db:seed
 
 `DB_PATH` controls the SQLite file and defaults to `data/querypilot.sqlite`.
 
+The seed is deterministic and creates 60 fictional customers, 9 categories, 36 products, 300 orders, 900 order items, and 300 payments. A fresh database therefore produces the same rows every time. Customer 1 is deliberately a high-value customer, customer 2 has the most delivered orders, and customer 3 has the most recent purchase so the clarification choices produce visibly different rankings.
+
 ## Run
 
 ```sh
@@ -23,6 +25,8 @@ npm run dev
 The health endpoint is available at `http://localhost:3000/api/health`.
 
 The development schema endpoint is available at `http://localhost:3000/api/schema`. It returns full SQLite metadata and a compact schema representation without selecting application rows.
+
+The read-only Database Explorer is available in the sidebar or at `http://localhost:3000` through the `Database Explorer` entry. It uses `GET /api/explorer` and `GET /api/explorer?table=customers` to display known table names, row counts, schema-backed columns, and at most 50 rows. It constructs all SQL on the server from the introspected schema; it does not accept arbitrary SQL and has no write operations.
 
 ### Conversation API
 
@@ -108,6 +112,7 @@ src/lib/db/         SQLite schema, seed data, database access, and introspection
 src/lib/conversation/ Session state, intent analysis, clarification, and message engine
 src/lib/sql/         SQL generation, validation, and read-only execution
 src/lib/results/     Verified-result explanation with deterministic fallback
+src/lib/db/explorer.js Read-only schema-backed table previews
 src/lib/ai/         Server-side provider abstraction and deterministic fallback
 scripts/             Local database commands
 tests/               Vitest database tests

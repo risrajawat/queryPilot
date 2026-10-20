@@ -54,6 +54,8 @@ export default function Home() {
   const [turns, setTurns] = useState([]);
   const [input, setInput] = useState('');
   const [inputLoading, setInputLoading] = useState(false);
+  const [view, setView] = useState('chat');
+  const [explorer, setExplorer] = useState({ loading: false, error: '', tables: [], selected: null });
   const inFlight = useRef(false);
   const chatViewportRef = useRef(null);
 
@@ -139,11 +141,22 @@ export default function Home() {
   };
 
   const startNewConversation = () => { if (inFlight.current) return; setConversationId(null); setTurns([]); setInput(''); };
+  const openExplorer = async (table = null) => {
+    setView('explorer');
+    setExplorer((current) => ({ ...current, loading: true, error: '' }));
+    try {
+      const response = await fetch(`/api/explorer${table ? `?table=${encodeURIComponent(table)}` : ''}`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Unable to load database explorer');
+      setExplorer({ loading: false, error: '', tables: payload.tables || [], selected: payload.table ? payload : null });
+    } catch (error) { setExplorer((current) => ({ ...current, loading: false, error: error.message })); }
+  };
+  const returnToChat = () => setView('chat');
   const healthLabel = { checking: 'Checking connection', online: 'All systems operational', offline: 'Connection unavailable' }[health];
   return <main className="app-shell min-h-screen bg-[#fbfcfb]">
-    <aside className="sidebar"><div className="brand"><div className="brand-mark" aria-hidden="true">Q</div><span>QueryPilot</span></div><div className="sidebar-content"><button className="new-query" type="button" onClick={startNewConversation}><span>+</span>New query</button><div className="sidebar-section"><p className="sidebar-label">Workspace</p><div className="workspace-card"><span className="workspace-icon">◈</span><span><strong>Commerce</strong><small>SQLite database</small></span><span className="chevron">⌄</span></div></div></div><div className="sidebar-footer"><div className="status-row"><span className={`status-dot ${health}`} /><span>{healthLabel}</span></div><p className="version">QueryPilot <span>v0.1</span></p></div></aside>
+     <aside className="sidebar"><div className="brand"><div className="brand-mark" aria-hidden="true">Q</div><span>QueryPilot</span></div><div className="sidebar-content"><button className="new-query" type="button" onClick={startNewConversation}><span>+</span>New query</button><div className="sidebar-section"><p className="sidebar-label">Workspace</p><div className="workspace-card"><span className="workspace-icon">◈</span><span><strong>Commerce</strong><small>SQLite database</small></span><span className="chevron">⌄</span></div><button className={`explorer-entry ${view === 'explorer' ? 'active' : ''}`} type="button" onClick={() => openExplorer()}><span>▦</span><span>Database Explorer</span><span className="chevron">›</span></button></div></div><div className="sidebar-footer"><div className="status-row"><span className={`status-dot ${health}`} /><span>{healthLabel}</span></div><p className="version">QueryPilot <span>v0.1</span></p></div></aside>
     <section className="main-panel"><header className="topbar"><div className="mobile-brand brand"><div className="brand-mark">Q</div><span>QueryPilot</span></div><div className="topbar-context"><span className="context-dot" />Commerce workspace</div><button className="avatar" type="button" disabled>JD</button></header>
-      <div className="content-wrap"><div className="hero"><p className="kicker">Your data, made clear</p><h1>What would you like<br className="desktop-break" /> to know?</h1><p className="hero-copy">Ask questions in plain English and get closer to the insight behind your data.</p></div>
+       <div className="content-wrap">{view === 'explorer' ? <section className="explorer-panel" aria-label="Database Explorer"><div className="explorer-heading"><div><p className="kicker">Workspace</p><h1>Database Explorer</h1><p className="hero-copy">Browse safe, read-only previews of your commerce data.</p></div><button className="back-chat" type="button" onClick={returnToChat}>← Return to chat</button></div>{explorer.error && <p className="request-error" role="alert">{explorer.error}</p>}{explorer.loading ? <p className="explorer-loading">Loading tables…</p> : <div className="explorer-layout"><nav className="explorer-tables" aria-label="Database tables"><p className="sidebar-label">Tables</p>{explorer.tables.map((table) => <button type="button" className={explorer.selected?.table?.name === table.name ? 'selected' : ''} key={table.name} onClick={() => openExplorer(table.name)}><span>{table.name}</span><small>{table.rowCount} rows</small></button>)}</nav><div className="explorer-data">{explorer.selected ? <><div className="explorer-meta"><strong>{explorer.selected.table.name}</strong><span>{explorer.selected.rowCount} total rows · showing up to {explorer.selected.limit}</span></div><div className="results-table-wrap"><table className="results-table"><thead><tr>{explorer.selected.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{explorer.selected.rows.map((row, rowIndex) => <tr key={rowIndex}>{explorer.selected.columns.map((column) => <td key={column}>{row[column] !== null && typeof row[column] === 'object' ? JSON.stringify(row[column]) : String(row[column] ?? '—')}</td>)}</tr>)}</tbody></table>{explorer.selected.rows.length === 0 && <p className="no-results">No rows found.</p>}</div></> : <p className="explorer-placeholder">Select a table to inspect its columns and rows.</p>}</div></div>}</section> : <><div className="hero"><p className="kicker">Your data, made clear</p><h1>What would you like<br className="desktop-break" /> to know?</h1><p className="hero-copy">Ask questions in plain English and get closer to the insight behind your data.</p></div>
          <section ref={chatViewportRef} className={`chat-viewport ${turns.length ? 'has-messages' : ''}`} aria-label="Conversation">
            {turns.length > 0 ? <div className="conversation">{turns.map((turn) => <article className="turn" key={turn.id}>
              <div className="message-row user"><div className="message-bubble"><span className="message-role">You</span><p>{turn.userMessage}</p></div></div>
@@ -152,6 +165,8 @@ export default function Home() {
          </section>
          <div className="query-card"><div className="query-card-top"><span className="query-icon">⌕</span><span className="query-label">{conversationId ? 'Conversation' : 'New conversation'}</span></div><textarea aria-label="Query input" className="query-input" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Ask anything about your data..." rows={3} /><div className="query-card-bottom"><span className="input-hint">{inputLoading ? 'Working…' : 'Press Enter to send · Shift + Enter for a new line'}</span><button className="send-button" type="button" disabled={!input.trim() || inputLoading} onClick={() => sendMessage()}><span>{inputLoading ? 'Working' : 'Send'}</span><span>↑</span></button></div></div>
         <section className="suggestions" aria-labelledby="suggestion-title"><div className="section-heading"><h2 id="suggestion-title">Try asking</h2><span>Sample prompts</span></div><div className="suggestion-grid">{suggestions.map((suggestion) => <button className="suggestion-card" type="button" key={suggestion.prompt} onClick={() => setInput(suggestion.prompt)}><div className="suggestion-icon">{suggestion.icon}</div><div><p className="suggestion-eyebrow">{suggestion.eyebrow}</p><p className="suggestion-prompt">{suggestion.prompt}</p></div><span className="suggestion-arrow">↗</span></button>)}</div></section>
-      </div></section>
+       </>}
+       </div>
+       </section>
   </main>;
 }

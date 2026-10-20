@@ -21,7 +21,7 @@ export function seedDatabase(database) {
   const insert = database.transaction(() => {
     const statements = {
       categories: database.prepare('INSERT OR IGNORE INTO categories (id, name, slug) VALUES (@id, @name, @slug)'),
-      customers: database.prepare('INSERT OR IGNORE INTO customers (id, email, first_name, last_name, phone, city) VALUES (@id, @email, @first_name, @last_name, @phone, @city)'),
+      customers: database.prepare('INSERT OR IGNORE INTO customers (id, email, first_name, last_name, phone, city, country) VALUES (@id, @email, @first_name, @last_name, @phone, @city, @country)'),
       products: database.prepare('INSERT OR IGNORE INTO products (id, category_id, sku, name, description, price_cents, stock_quantity) VALUES (@id, @category_id, @sku, @name, @description, @price_cents, @stock_quantity)'),
       orders: database.prepare('INSERT OR IGNORE INTO orders (id, customer_id, status, subtotal_cents, tax_cents, shipping_cents, total_cents, ordered_at, shipped_at) VALUES (@id, @customer_id, @status, @subtotal_cents, @tax_cents, @shipping_cents, @total_cents, @ordered_at, @shipped_at)'),
       order_items: database.prepare('INSERT OR IGNORE INTO order_items (id, order_id, product_id, quantity, unit_price_cents) VALUES (@id, @order_id, @product_id, @quantity, @unit_price_cents)'),

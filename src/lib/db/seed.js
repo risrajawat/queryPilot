@@ -1,52 +1,94 @@
-export const seedData = {
-  categories: [
-    { id: 1, name: 'Electronics', slug: 'electronics' },
-    { id: 2, name: 'Home & Kitchen', slug: 'home-kitchen' },
-    { id: 3, name: 'Outdoor', slug: 'outdoor' },
-  ],
-  customers: [
-    { id: 1, email: 'maya.chen@example.com', first_name: 'Maya', last_name: 'Chen', phone: '415-555-0101', city: 'San Francisco', country: 'US' },
-    { id: 2, email: 'jordan.rivera@example.com', first_name: 'Jordan', last_name: 'Rivera', phone: '512-555-0102', city: 'Austin', country: 'US' },
-    { id: 3, email: 'sam.taylor@example.com', first_name: 'Sam', last_name: 'Taylor', phone: '312-555-0103', city: 'Chicago', country: 'US' },
-    { id: 4, email: 'olivia.wilson@example.com', first_name: 'Olivia', last_name: 'Wilson', phone: '206-555-0104', city: 'Seattle', country: 'US' },
-    { id: 5, email: 'aisha.khan@example.com', first_name: 'Aisha', last_name: 'Khan', phone: '+91-555-0105', city: 'Bengaluru', country: 'IN' },
-    { id: 6, email: 'liam.morgan@example.com', first_name: 'Liam', last_name: 'Morgan', phone: '+44-555-0106', city: 'Manchester', country: 'GB' },
-  ],
-  products: [
-    { id: 1, category_id: 1, sku: 'AUDIO-100', name: 'Wireless Headphones', description: 'Noise-cancelling over-ear headphones', price_cents: 12999, stock_quantity: 42 },
-    { id: 2, category_id: 1, sku: 'TECH-210', name: 'USB-C Hub', description: 'Seven-port aluminum USB-C hub', price_cents: 4999, stock_quantity: 85 },
-    { id: 3, category_id: 2, sku: 'HOME-310', name: 'Ceramic Pour-Over Set', description: 'Dripper, carafe, and two cups', price_cents: 3899, stock_quantity: 27 },
-    { id: 4, category_id: 2, sku: 'HOME-410', name: 'Linen Throw Blanket', description: 'Lightweight 100% linen blanket', price_cents: 7999, stock_quantity: 18 },
-    { id: 5, category_id: 3, sku: 'CAMP-510', name: 'Insulated Daypack', description: 'Twenty-liter water-resistant daypack', price_cents: 8999, stock_quantity: 31 },
-    { id: 6, category_id: 3, sku: 'CAMP-610', name: 'Compact Camping Lantern', description: 'Rechargeable LED lantern', price_cents: 3299, stock_quantity: 64 },
-  ],
-  orders: [
-    { id: 1001, customer_id: 1, status: 'delivered', subtotal_cents: 17998, tax_cents: 1620, shipping_cents: 0, total_cents: 19618, ordered_at: '2025-01-08T14:22:00Z', shipped_at: '2025-01-10T09:00:00Z' },
-    { id: 1002, customer_id: 2, status: 'shipped', subtotal_cents: 12898, tax_cents: 1032, shipping_cents: 599, total_cents: 14529, ordered_at: '2025-02-16T18:05:00Z', shipped_at: '2025-02-18T11:30:00Z' },
-    { id: 1003, customer_id: 3, status: 'paid', subtotal_cents: 7999, tax_cents: 800, shipping_cents: 0, total_cents: 8799, ordered_at: '2025-03-21T10:10:00Z', shipped_at: null },
-    { id: 1004, customer_id: 1, status: 'cancelled', subtotal_cents: 3299, tax_cents: 297, shipping_cents: 599, total_cents: 4195, ordered_at: '2025-04-24T16:40:00Z', shipped_at: null },
-    { id: 1005, customer_id: 4, status: 'processing', subtotal_cents: 17998, tax_cents: 1620, shipping_cents: 0, total_cents: 19618, ordered_at: '2025-05-27T08:15:00Z', shipped_at: null },
-    { id: 1006, customer_id: 1, status: 'delivered', subtotal_cents: 7999, tax_cents: 720, shipping_cents: 0, total_cents: 8719, ordered_at: '2025-06-12T12:30:00Z', shipped_at: '2025-06-14T09:00:00Z' },
-    { id: 1007, customer_id: 5, status: 'delivered', subtotal_cents: 8999, tax_cents: 900, shipping_cents: 599, total_cents: 10498, ordered_at: '2025-07-03T07:45:00Z', shipped_at: '2025-07-05T09:15:00Z' },
-  ],
-  order_items: [
-    { id: 1, order_id: 1001, product_id: 1, quantity: 1, unit_price_cents: 12999 },
-    { id: 2, order_id: 1001, product_id: 2, quantity: 1, unit_price_cents: 4999 },
-    { id: 3, order_id: 1002, product_id: 3, quantity: 1, unit_price_cents: 3899 },
-    { id: 4, order_id: 1002, product_id: 5, quantity: 1, unit_price_cents: 8999 },
-    { id: 5, order_id: 1003, product_id: 4, quantity: 1, unit_price_cents: 7999 },
-    { id: 6, order_id: 1004, product_id: 6, quantity: 1, unit_price_cents: 3299 },
-    { id: 7, order_id: 1005, product_id: 5, quantity: 2, unit_price_cents: 8999 },
-    { id: 8, order_id: 1006, product_id: 4, quantity: 1, unit_price_cents: 7999 },
-    { id: 9, order_id: 1007, product_id: 5, quantity: 1, unit_price_cents: 8999 },
-  ],
-  payments: [
-    { id: 1, order_id: 1001, provider: 'stripe', provider_reference: 'pi_demo_1001', amount_cents: 19617, status: 'captured', paid_at: '2025-01-08T14:23:00Z' },
-    { id: 2, order_id: 1002, provider: 'stripe', provider_reference: 'pi_demo_1002', amount_cents: 14529, status: 'captured', paid_at: '2025-01-16T18:06:00Z' },
-    { id: 3, order_id: 1003, provider: 'stripe', provider_reference: 'pi_demo_1003', amount_cents: 8799, status: 'captured', paid_at: '2025-01-21T10:11:00Z' },
-    { id: 4, order_id: 1004, provider: 'stripe', provider_reference: 'pi_demo_1004', amount_cents: 4195, status: 'refunded', paid_at: '2025-01-24T16:41:00Z' },
-    { id: 5, order_id: 1005, provider: 'stripe', provider_reference: 'pi_demo_1005', amount_cents: 19618, status: 'authorized', paid_at: null },
-    { id: 6, order_id: 1006, provider: 'stripe', provider_reference: 'pi_demo_1006', amount_cents: 8719, status: 'captured', paid_at: '2025-06-12T12:31:00Z' },
-    { id: 7, order_id: 1007, provider: 'stripe', provider_reference: 'pi_demo_1007', amount_cents: 10498, status: 'captured', paid_at: '2025-07-03T07:46:00Z' },
-  ],
-};
+// A small, dependency-free deterministic data generator. Keeping the generator
+// pure makes the fixture useful both for the app and for repeatable tests.
+function createPrng(seed = 0x7a17c0de) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
+
+const categoryNames = [
+  ['Tech & Audio', 'tech-audio'], ['Home & Kitchen', 'home-kitchen'], ['Outdoor & Travel', 'outdoor-travel'],
+  ['Apparel', 'apparel'], ['Beauty & Wellness', 'beauty-wellness'], ['Office', 'office'],
+  ['Books & Media', 'books-media'], ['Kids & Family', 'kids-family'], ['Pet Supplies', 'pet-supplies'],
+];
+const firstNames = ['Avery', 'Blair', 'Cameron', 'Devon', 'Emery', 'Finley', 'Greer', 'Harper', 'Indigo', 'Jules', 'Kai', 'Lane', 'Morgan', 'Nico', 'Oakley', 'Parker', 'Quinn', 'Reese', 'Sage', 'Tatum'];
+const lastNames = ['Alden', 'Bennett', 'Carter', 'Dawson', 'Ellis', 'Foster', 'Griffin', 'Hayes', 'Irwin', 'Jensen', 'Kim', 'Lennox', 'Monroe', 'Nolan', 'Ortega', 'Patel', 'Quincy', 'Rowan', 'Sawyer', 'Turner'];
+const locations = [
+  ['Portland', 'US'], ['Toronto', 'CA'], ['Dublin', 'IE'], ['Bristol', 'GB'], ['Bengaluru', 'IN'],
+  ['Melbourne', 'AU'], ['Berlin', 'DE'], ['Osaka', 'JP'], ['Mexico City', 'MX'], ['Cape Town', 'ZA'],
+];
+const productAdjectives = ['Aurora', 'Cedar', 'Orbit', 'Lumen', 'Meadow', 'Nimbus', 'Quartz', 'Solstice', 'Willow', 'Cobalt', 'Mosaic', 'Ember'];
+const productTypes = ['Desk Speaker', 'Travel Mug', 'Trail Pack', 'Everyday Hoodie', 'Daily Journal', 'Soft Throw', 'Field Lantern', 'Cloud Pillow', 'Studio Lamp'];
+const statuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+function isoDate(orderNumber, random) {
+  const day = 1 + Math.floor(random() * 26);
+  const month = 1 + (orderNumber % 15); // Jan 2025 through Mar 2026
+  const year = 2025 + Math.floor((month - 1) / 12);
+  const monthInYear = ((month - 1) % 12) + 1;
+  return `${year}-${String(monthInYear).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(8 + Math.floor(random() * 12)).padStart(2, '0')}:${String(Math.floor(random() * 60)).padStart(2, '0')}:00Z`;
+}
+
+export function createSeedData() {
+  const random = createPrng();
+  const categories = categoryNames.map(([name, slug], index) => ({ id: index + 1, name, slug }));
+  const customers = Array.from({ length: 60 }, (_, index) => {
+    const location = locations[index % locations.length];
+    return {
+      id: index + 1,
+      email: `shopper${String(index + 1).padStart(2, '0')}@example.test`,
+      first_name: firstNames[index % firstNames.length],
+      last_name: lastNames[Math.floor(index / firstNames.length) % lastNames.length],
+      phone: `+1-202-555-${String(1000 + index).slice(-4)}`,
+      city: location[0], country: location[1],
+    };
+  });
+  const products = Array.from({ length: 36 }, (_, index) => {
+    const categoryId = (index % categories.length) + 1;
+    const price = 1299 + ((index * 1873) % 18500);
+    return {
+      id: index + 1, category_id: categoryId, sku: `SYN-${String(index + 1).padStart(3, '0')}`,
+      name: `${productAdjectives[index % productAdjectives.length]} ${productTypes[index % productTypes.length]}`,
+      description: `Fictional ${productTypes[index % productTypes.length].toLowerCase()} for the sample catalog`,
+      price_cents: price, stock_quantity: 20 + ((index * 29) % 180),
+    };
+  });
+
+  const orders = [];
+  const order_items = [];
+  const payments = [];
+  let itemId = 1;
+  for (let offset = 0; offset < 300; offset += 1) {
+    const orderId = 1001 + offset;
+    // Deliberately shape the rankings: customer 1 has high-value purchases,
+    // customer 2 has the most orders, and customer 3 bought most recently.
+    const customerId = offset < 8 ? 1 : offset < 33 ? 2 : offset === 299 ? 3 : 4 + ((offset * 17) % 53);
+    const orderedAt = offset === 299 ? '2026-03-28T18:20:00Z' : isoDate(offset, random);
+    const status = offset === 299 || customerId === 1 || customerId === 2
+      ? 'delivered'
+      : statuses[offset % statuses.length];
+    const itemCount = 2 + (offset % 3);
+    const chosen = new Set();
+    const items = [];
+    while (items.length < itemCount) {
+      const productId = customerId === 1 ? 28 + items.length : 1 + Math.floor(random() * products.length);
+      if (chosen.has(productId)) continue;
+      chosen.add(productId);
+      const product = products[productId - 1];
+      const quantity = customerId === 1 ? 18 + (offset % 4) : customerId === 2 ? 1 : 1 + Math.floor(random() * 2);
+      items.push({ id: itemId++, order_id: orderId, product_id: productId, quantity, unit_price_cents: product.price_cents });
+    }
+    const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price_cents, 0);
+    const tax = Math.floor(subtotal * ((offset % 4) + 5) / 100);
+    const shipping = offset % 5 === 0 ? 0 : 599;
+    const total = subtotal + tax + shipping;
+    orders.push({ id: orderId, customer_id: customerId, status, subtotal_cents: subtotal, tax_cents: tax, shipping_cents: shipping, total_cents: total, ordered_at: orderedAt, shipped_at: ['shipped', 'delivered'].includes(status) ? orderedAt : null });
+    order_items.push(...items);
+    payments.push({ id: offset + 1, order_id: orderId, provider: offset % 3 === 0 ? 'stripe' : 'adyen', provider_reference: `pay_synthetic_${orderId}`, amount_cents: total, status: status === 'cancelled' ? 'refunded' : status === 'pending' ? 'pending' : status === 'paid' ? 'captured' : 'authorized', paid_at: status === 'pending' ? null : orderedAt });
+  }
+  return { categories, customers, products, orders, order_items, payments };
+}
+
+export const seedData = createSeedData();
