@@ -87,6 +87,14 @@ h1 { margin: 0; color: #182624; font-size: clamp(36px, 5vw, 53px); font-weight: 
 .choice-list button { padding: 6px 10px; border: 1px solid #b9d7ca; border-radius: 7px; color: var(--teal); background: #f6fcf9; font-size: 11px; cursor: pointer; }
 .choice-list button:hover { background: var(--mint); }
 .typing { color: #81908c; font-style: italic; }
+.sql-preview { margin-top: 18px; padding: 12px 14px; border: 1px solid #dfe9e4; border-radius: 9px; background: #f7faf8; }
+.sql-preview-heading { display: flex; align-items: center; justify-content: space-between; color: #71817d; font: 10px 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
+.sql-preview-heading strong { color: var(--mint-strong); font-weight: 500; }
+.sql-preview.generating .sql-preview-heading strong { color: #9a7a35; }
+.sql-preview.error .sql-preview-heading strong, .sql-preview-error { color: #b65f58; }
+.sql-preview pre { overflow-x: auto; margin: 9px 0 0; color: #354542; font: 11px/1.55 'DM Mono', monospace; white-space: pre-wrap; }
+.sql-preview-error { margin: 9px 0 0; font-size: 11px; }
+.sql-preview-note { margin: 9px 0 0; color: #a0aca8; font-size: 10px; }
 .suggestions { margin-top: 55px; }
 .section-heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
 .section-heading h2 { margin: 0; font-size: 13px; font-weight: 600; }

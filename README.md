@@ -1,6 +1,6 @@
 # QueryPilot
 
-Phase 3 adds a modular backend conversation layer on top of the Phase 2 schema introspection. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, and resolves follow-ups. SQL generation and execution remain out of scope.
+Phase 4 adds a schema-aware, read-only SQL generation and validation layer on top of the Phase 3 conversation backend. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, resolves follow-ups, and produces validated SQLite `SELECT` previews. SQL is never executed by the generator endpoint.
 
 ## Setup
 
@@ -44,7 +44,19 @@ The backend returns `intent`, `clarification`, `resolvedContext`, and the persis
 
 The provider boundary is `src/lib/ai/provider.js`. `DeterministicProvider` is the offline fallback. `Gpt6AstraProvider` is an intentionally isolated future adapter; it does not make network calls or assume API behavior. Any future API key must remain server-side (for example, `GPT6_ASTRA_API_KEY` in the runtime environment).
 
-The initial UI is available at `http://localhost:3000`. The Phase 3 chat shell can send questions, display conversation messages, and present clarification choices; it does not display SQL or query results yet.
+### SQL preview API
+
+After an intent is resolved, generate and validate a read-only query with:
+
+```sh
+curl -X POST http://localhost:3000/api/conversations/<id>/sql
+```
+
+The endpoint uses the session's compact schema, current intent, resolved context, and messages. It rejects pending clarifications, unknown schema identifiers, comments, multiple statements, and all non-`SELECT` or mutating SQL. The response contains `sql`, parameter values, an explanation, and validator status; it does not run the query.
+
+Supported Phase 4 intents are customer ranking by delivered-order revenue, order count, or latest purchase; customer listing; order summaries; and product inventory. Generation is deterministic for the offline MVP, schema-bound, and returns a structured `unsupported_intent` result when required identifiers are absent. User-supplied filter values are represented as `?` parameters rather than interpolated into SQL. Validation allows only one `SELECT`, rejects comments and write/admin/transaction statements, and checks referenced tables, aliases, and columns against the compact schema. The UI's development preview is explicitly marked `Preview only · SQL is not executed`; result rendering is not implemented yet.
+
+The initial UI is available at `http://localhost:3000`. The existing QueryPilot design can send questions, display conversation messages and clarification choices, and show a small validated SQL preview after a clear intent. It does not execute SQL or display query results.
 
 ## Test
 

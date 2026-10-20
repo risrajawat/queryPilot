@@ -25,6 +25,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sqlPreview, setSqlPreview] = useState(null);
   const conversationEndRef = useRef(null);
 
   useEffect(() => {
@@ -107,6 +108,35 @@ export default function Home() {
           choices: Array.isArray(choices) ? choices : [],
         }]);
       }
+
+      const intent = payload.intent || assistant?.intent;
+      const isClearIntent = intent?.status === 'clear' && !clarification?.pending;
+      if (isClearIntent) {
+        setSqlPreview({ status: 'generating', sql: '' });
+        try {
+          const sqlResponse = await fetch(`/api/conversations/${encodeURIComponent(id)}/sql`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: content,
+              intent,
+              resolvedContext: payload.resolvedContext,
+            }),
+          });
+          if (!sqlResponse.ok) throw new Error('Unable to generate SQL preview');
+          const sqlPayload = await sqlResponse.json();
+          const generatedSql = sqlPayload.sql
+            || sqlPayload.generatedSql
+            || sqlPayload.query
+            || sqlPayload.result?.sql;
+          if (!generatedSql) throw new Error('The SQL response did not include a query');
+          setSqlPreview({ status: 'validated', sql: generatedSql });
+        } catch (sqlError) {
+          const message = sqlError.message || 'SQL preview unavailable';
+          setSqlPreview({ status: 'error', sql: '', error: message });
+          setError(`SQL preview unavailable: ${message}`);
+        }
+      }
     } catch (requestError) {
       setError(requestError.message || 'Something went wrong. Please try again.');
     } finally {
@@ -120,6 +150,7 @@ export default function Home() {
     setMessages([]);
     setInput('');
     setError('');
+    setSqlPreview(null);
   };
 
   return (
@@ -228,6 +259,21 @@ export default function Home() {
                 </div>
               ))}
               {loading && <div className="message-row assistant"><div className="message-bubble typing" aria-live="polite">QueryPilot is thinking…</div></div>}
+            </section>
+          )}
+
+          {sqlPreview && (
+            <section className={`sql-preview ${sqlPreview.status}`} aria-label="Development SQL preview">
+              <div className="sql-preview-heading">
+                <span>Development SQL preview</span>
+                {sqlPreview.status === 'validated' && <strong>Validated ✓</strong>}
+                {sqlPreview.status === 'generating' && <strong>Generating…</strong>}
+                {sqlPreview.status === 'error' && <strong>Unavailable</strong>}
+              </div>
+              {sqlPreview.status === 'error'
+                ? <p className="sql-preview-error">{sqlPreview.error}</p>
+                : <pre>{sqlPreview.sql || 'Preparing read-only SQL…'}</pre>}
+              <p className="sql-preview-note">Preview only · SQL is not executed</p>
             </section>
           )}
 
