@@ -4,6 +4,14 @@ export const BEST_CUSTOMER_CHOICES = [
   { id: 'last_purchase', label: 'Most recent purchases' },
 ];
 
+function normalizeChoiceText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[“”"'.,!?]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function clarificationFor(intent) {
   if (intent?.name !== 'customer_ranking' || !intent.ambiguous) return null;
   return {
@@ -15,12 +23,13 @@ export function clarificationFor(intent) {
 
 export function resolveClarification(message, pending) {
   if (!pending?.pending) return null;
-  const text = String(message || '').toLowerCase();
+  const text = normalizeChoiceText(message);
   const choice = BEST_CUSTOMER_CHOICES.find((item) =>
-    text.includes(item.id.replace('_', ' ')) || text.includes(item.label.toLowerCase()) ||
-    (item.id === 'total_revenue' && /highest|revenue/.test(text)) ||
-    (item.id === 'order_count' && /most orders?/.test(text)) ||
-    (item.id === 'last_purchase' && /recent/.test(text)),
+    text === normalizeChoiceText(item.label) ||
+    text === normalizeChoiceText(item.id.replaceAll('_', ' ')) ||
+    (item.id === 'total_revenue' && text === 'highest revenue') ||
+    (item.id === 'order_count' && text === 'most orders') ||
+    (item.id === 'last_purchase' && text === 'recent purchases'),
   );
   return choice ? { status: 'clear', name: 'customer_ranking', subject: 'customers', metric: choice.id, confidence: 1, ambiguous: false, ambiguities: [], clarificationQuestion: null } : null;
 }

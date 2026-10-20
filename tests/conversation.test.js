@@ -21,7 +21,18 @@ describe('intent and clarification', () => {
   });
   it('resolves the natural-language follow-up Highest revenue', () => {
     const ambiguous = processMessage(createSession(), 'best customers');
-     expect(resolveClarification('Highest revenue.', ambiguous.clarification)).toMatchObject({ status: 'clear', metric: 'total_revenue', ambiguous: false });
+    const result = resolveClarification('Highest total revenue', ambiguous.clarification);
+    expect(result).toMatchObject({ status: 'clear', name: 'customer_ranking', subject: 'customers', metric: 'total_revenue', ambiguous: false });
+  });
+  it.each([
+    ['Highest total revenue', 'total_revenue'],
+    ['Most orders', 'order_count'],
+    ['Most recent purchases', 'last_purchase'],
+  ])('resolves exact UI choice "%s" to %s', (answer, metric) => {
+    const ambiguous = processMessage(createSession(), 'Show me the best customers');
+    const result = processMessage({ ...createSession(), currentIntent: ambiguous.intent, clarification: ambiguous.clarification, resolvedContext: ambiguous.resolvedContext }, answer);
+    expect(result.intent).toMatchObject({ status: 'clear', name: 'customer_ranking', subject: 'customers', metric, ambiguous: false });
+    expect(result.clarification.pending).toBe(false);
   });
   it('retains previous context for follow-up questions', () => {
     const session = createSession();
@@ -29,6 +40,20 @@ describe('intent and clarification', () => {
     const second = processMessage({ ...session, currentIntent: first.intent, clarification: first.clarification, resolvedContext: first.resolvedContext }, 'Most orders');
     expect(second.intent).toMatchObject({ name: 'customer_ranking', metric: 'order_count' });
     expect(second.resolvedContext).toMatchObject({ subject: 'customers', metric: 'order_count' });
+  });
+  it('keeps conversation messages in chronological order', () => {
+    const session = createSession();
+    updateSession(session.id, (value) => {
+      value.messages.push({ role: 'user', content: 'Show me the best customers' });
+      value.messages.push({ role: 'assistant', content: 'What do you mean by “best customers”?' });
+      value.messages.push({ role: 'user', content: 'Highest total revenue' });
+      return value;
+    });
+    expect(getSession(session.id).messages.map(({ content }) => content)).toEqual([
+      'Show me the best customers',
+      'What do you mean by “best customers”?',
+      'Highest total revenue',
+    ]);
   });
 });
 

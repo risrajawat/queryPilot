@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const suggestions = [
   {
@@ -25,6 +25,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const conversationEndRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -45,6 +46,10 @@ export default function Home() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, loading]);
 
   const healthLabel = {
     checking: 'Checking connection',
@@ -85,11 +90,11 @@ export default function Home() {
       const payload = await response.json();
       const conversationMessages = payload.conversation?.messages || [];
       const assistant = payload.assistant || payload.response
-        || conversationMessages.filter((message) => message.role === 'assistant').pop()
-        || payload.message || payload;
+        || (payload.clarification?.pending && conversationMessages.filter((message) => message.role === 'assistant').pop())
+        || payload.message || null;
       const assistantText = typeof assistant === 'string'
         ? assistant
-        : assistant.content || assistant.text || assistant.answer;
+        : assistant?.content || assistant?.text || assistant?.answer;
       const clarification = payload.clarification || assistant?.clarification;
       const choices = clarification?.choices || payload.choices || assistant?.choices;
       const clarificationText = clarification?.question || payload.clarificationQuestion;
@@ -225,6 +230,8 @@ export default function Home() {
               {loading && <div className="message-row assistant"><div className="message-bubble typing" aria-live="polite">QueryPilot is thinking…</div></div>}
             </section>
           )}
+
+          <div ref={conversationEndRef} aria-hidden="true" />
 
           <section className="suggestions" aria-labelledby="suggestion-title">
             <div className="section-heading">
