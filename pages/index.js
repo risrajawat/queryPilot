@@ -20,6 +20,11 @@ const suggestions = [
 
 export default function Home() {
   const [health, setHealth] = useState('checking');
+  const [conversationId, setConversationId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -47,6 +52,71 @@ export default function Home() {
     offline: 'Connection unavailable',
   }[health];
 
+  const sendMessage = async (text = input) => {
+    const content = text.trim();
+    if (!content || loading) return;
+
+    setError('');
+    setInput('');
+    setMessages((current) => [...current, { role: 'user', content }]);
+    setLoading(true);
+
+    try {
+      let id = conversationId;
+      if (!id) {
+        const startResponse = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        if (!startResponse.ok) throw new Error('Unable to start a conversation');
+        const started = await startResponse.json();
+        id = started.id || started.conversationId || started.conversation?.id;
+        if (!id) throw new Error('The conversation response did not include an id');
+        setConversationId(id);
+      }
+
+      const response = await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, message: content }),
+      });
+      if (!response.ok) throw new Error('Unable to send your question');
+      const payload = await response.json();
+      const conversationMessages = payload.conversation?.messages || [];
+      const assistant = payload.assistant || payload.response
+        || conversationMessages.filter((message) => message.role === 'assistant').pop()
+        || payload.message || payload;
+      const assistantText = typeof assistant === 'string'
+        ? assistant
+        : assistant.content || assistant.text || assistant.answer;
+      const clarification = payload.clarification || assistant?.clarification;
+      const choices = clarification?.choices || payload.choices || assistant?.choices;
+      const clarificationText = clarification?.question || payload.clarificationQuestion;
+
+      if (assistantText || clarificationText) {
+        setMessages((current) => [...current, {
+          role: 'assistant',
+          content: assistantText || clarificationText,
+          clarification: assistantText && assistantText !== clarificationText ? clarificationText : '',
+          choices: Array.isArray(choices) ? choices : [],
+        }]);
+      }
+    } catch (requestError) {
+      setError(requestError.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNewConversation = () => {
+    if (loading) return;
+    setConversationId(null);
+    setMessages([]);
+    setInput('');
+    setError('');
+  };
+
   return (
     <main className="app-shell min-h-screen bg-[#fbfcfb]">
       <aside className="sidebar">
@@ -56,7 +126,7 @@ export default function Home() {
         </div>
 
         <div className="sidebar-content">
-          <button className="new-query" type="button" disabled>
+          <button className="new-query" type="button" onClick={startNewConversation}>
             <span aria-hidden="true">+</span>
             New query
           </button>
@@ -106,24 +176,55 @@ export default function Home() {
           <div className="query-card">
             <div className="query-card-top">
               <span className="query-icon" aria-hidden="true">⌕</span>
-              <span className="query-label">New conversation</span>
-              <span className="coming-soon">Coming soon</span>
+            <span className="query-label">{conversationId ? 'Conversation' : 'New conversation'}</span>
             </div>
             <textarea
               aria-label="Query input"
               className="query-input"
-              disabled
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  sendMessage();
+                }
+              }}
               placeholder="Ask anything about your data..."
               rows={3}
             />
             <div className="query-card-bottom">
-              <span className="input-hint">Natural language queries will be available here.</span>
-              <button className="send-button" type="button" disabled aria-label="Send query">
-                <span>Send</span>
+              <span className="input-hint">{loading ? 'Thinking...' : 'Press Enter to send · Shift + Enter for a new line'}</span>
+              <button className="send-button" type="button" disabled={!input.trim() || loading} onClick={() => sendMessage()} aria-label="Send query">
+                <span>{loading ? 'Sending' : 'Send'}</span>
                 <span aria-hidden="true">↑</span>
               </button>
             </div>
           </div>
+
+          {error && <p className="request-error" role="alert">{error}</p>}
+
+          {messages.length > 0 && (
+            <section className="conversation" aria-label="Conversation">
+              {messages.map((message, index) => (
+                <div className={`message-row ${message.role}`} key={`${message.role}-${index}`}>
+                  <div className="message-bubble">
+                    <span className="message-role">{message.role === 'user' ? 'You' : 'QueryPilot'}</span>
+                    <p>{message.content}</p>
+                    {message.clarification && <p className="clarification-question">{message.clarification}</p>}
+                    {message.choices?.length > 0 && (
+                      <div className="choice-list">
+                        {message.choices.map((choice) => {
+                          const label = typeof choice === 'string' ? choice : choice.label || choice.text || choice.value;
+                          return <button key={label} type="button" onClick={() => sendMessage(label)} disabled={loading}>{label}</button>;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {loading && <div className="message-row assistant"><div className="message-bubble typing" aria-live="polite">QueryPilot is thinking…</div></div>}
+            </section>
+          )}
 
           <section className="suggestions" aria-labelledby="suggestion-title">
             <div className="section-heading">
@@ -132,19 +233,19 @@ export default function Home() {
             </div>
             <div className="suggestion-grid">
               {suggestions.map((suggestion) => (
-                <div className="suggestion-card" key={suggestion.prompt}>
+                <button className="suggestion-card" type="button" key={suggestion.prompt} onClick={() => setInput(suggestion.prompt)}>
                   <div className="suggestion-icon" aria-hidden="true">{suggestion.icon}</div>
                   <div>
                     <p className="suggestion-eyebrow">{suggestion.eyebrow}</p>
                     <p className="suggestion-prompt">{suggestion.prompt}</p>
                   </div>
                   <span className="suggestion-arrow" aria-hidden="true">↗</span>
-                </div>
+                </button>
               ))}
             </div>
           </section>
 
-          <div className="empty-note">
+          <div className={`empty-note ${messages.length ? 'has-messages' : ''}`}>
             <span className="empty-note-icon" aria-hidden="true">✦</span>
             <span>Your conversations will appear here once you start exploring.</span>
           </div>
