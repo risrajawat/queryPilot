@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDatabase, seedDatabase } from '../src/lib/db/index.js';
+import { compactSchema, getDatabaseSchema, introspectDatabase } from '../src/lib/db/schema-introspection.js';
 
 let database;
 afterEach(() => database?.close());
@@ -30,5 +31,43 @@ describe('database foundation', () => {
   it('enforces foreign-key relationships', () => {
     database = createDatabase();
     expect(() => database.prepare('INSERT INTO orders (id, customer_id, status, subtotal_cents, total_cents, ordered_at) VALUES (9, 999, \'pending\', 0, 0, \'2025-01-01\')').run()).toThrow();
+  });
+});
+
+describe('database schema introspection', () => {
+  it('returns tables, columns, types, primary keys, foreign keys, and relationships without rows', () => {
+    database = createDatabase();
+    seedDatabase(database);
+    const schema = introspectDatabase(database);
+
+    expect(schema.tables.map((table) => table.name)).toEqual([
+      'categories', 'customers', 'order_items', 'orders', 'payments', 'products',
+    ]);
+    const products = schema.tables.find((table) => table.name === 'products');
+    expect(products.primaryKeys).toEqual(['id']);
+    expect(products.columns.find((column) => column.name === 'price_cents')).toMatchObject({ type: 'INTEGER', primaryKey: false });
+    expect(products.columns.find((column) => column.name === 'id')).toMatchObject({ type: 'INTEGER', primaryKey: true });
+    expect(products.foreignKeys).toContainEqual(expect.objectContaining({
+      column: 'category_id', referencedTable: 'categories', referencedColumn: 'id',
+    }));
+    expect(schema.relationships).toContainEqual({
+      fromTable: 'orders', fromColumn: 'customer_id', toTable: 'customers', toColumn: 'id',
+    });
+    expect(JSON.stringify(schema)).not.toContain('Maya');
+    expect(schema).not.toHaveProperty('rows');
+  });
+
+  it('creates a compact schema representation with no row data', () => {
+    database = createDatabase();
+    seedDatabase(database);
+    const schema = getDatabaseSchema(database);
+    const compact = compactSchema(schema);
+
+    expect(compact).toContain('TABLE orders');
+    expect(compact).toContain('  - total_cents INTEGER (NOT NULL)');
+    expect(compact).toContain('orders.customer_id -> customers.id');
+    expect(compact).not.toContain('1001');
+    expect(compact).not.toContain('maya.chen@example.com');
+    expect(schema).toHaveProperty('compact', compact);
   });
 });

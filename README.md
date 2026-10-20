@@ -1,6 +1,6 @@
 # QueryPilot
 
-Phase 1 is the foundation for QueryPilot, an agentic Text-to-SQL application. It includes a modular SQLite commerce database, deterministic seed data, a database access layer, a health endpoint, and a responsive chat UI shell. AI, Text-to-SQL, and clarification behavior will be added in later phases.
+Phase 2 adds a reusable, AI-independent SQLite schema introspection layer to the QueryPilot foundation. It exposes tables, columns, types, keys, relationships, and a compact row-free schema representation. AI, Text-to-SQL, clarification, and SQL execution behavior are intentionally deferred.
 
 ## Setup
 
@@ -22,6 +22,8 @@ npm run dev
 
 The health endpoint is available at `http://localhost:3000/api/health`.
 
+The development schema endpoint is available at `http://localhost:3000/api/schema`. It returns full SQLite metadata and a compact schema representation without selecting application rows.
+
 The initial UI is available at `http://localhost:3000`. It intentionally shows a disabled chat placeholder until the agent workflow is implemented.
 
 ## Test
@@ -36,7 +38,7 @@ Tests use in-memory SQLite and do not require network access or a pre-existing d
 
 ```text
 pages/              Next.js pages and API routes
-src/lib/db/         SQLite schema, seed data, and database access layer
+src/lib/db/         SQLite schema, seed data, database access, and introspection
 scripts/             Local database commands
 tests/               Vitest database tests
 styles/              Global styles for the UI shell
