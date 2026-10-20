@@ -33,9 +33,28 @@ export function seedDatabase(database) {
   return database;
 }
 
+export function isServerlessEnvironment() {
+  return Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    (process.env.NODE_ENV === 'production' && !process.env.IS_LOCAL)
+  );
+}
+
 export function getDatabase(filename = defaultDbPath, { seed = true } = {}) {
-  if (filename !== ':memory:') fs.mkdirSync(path.dirname(filename), { recursive: true });
+  if (filename !== ':memory:') {
+    if (isServerlessEnvironment()) {
+      const error = new Error(
+        'Cannot create local SQLite database in serverless production environment (/var/task). Please configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN.'
+      );
+      error.code = 'SERVERLESS_FS_ERROR';
+      throw error;
+    }
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
+  }
   const database = createDatabase(filename);
   if (seed) seedDatabase(database);
   return database;
 }
+
+export { getDatabaseAdapter, isTursoConfigured } from './adapter.js';

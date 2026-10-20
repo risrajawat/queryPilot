@@ -18,7 +18,20 @@ export default function handler(request, response) {
   const validation = validateSql(generated.sql, session.schema);
   if (!validation.valid) return response.status(422).json({ success: false, reason: 'sql_validation_failed', validation, generated });
 
-  const result = executeSql(generated.sql, generated.parameters, session.schema);
+  const execution = executeSql(generated.sql, generated.parameters, session.schema);
+  if (execution && typeof execution.then === 'function') {
+    return execution
+      .then((result) => {
+        if (!result.success) return response.status(422).json({ ...result, generated, validation });
+        return response.status(200).json({ ...result, intent: session.currentIntent, sql: generated.sql, parameters: generated.parameters, explanation: generated.explanation, validation });
+      })
+      .catch((err) => {
+        console.error('[Execute Error]:', err.message);
+        return response.status(500).json({ success: false, reason: 'execution_error', message: 'The query could not be executed.' });
+      });
+  }
+
+  const result = execution;
   if (!result.success) return response.status(422).json({ ...result, generated, validation });
   return response.status(200).json({ ...result, intent: session.currentIntent, sql: generated.sql, parameters: generated.parameters, explanation: generated.explanation, validation });
 }

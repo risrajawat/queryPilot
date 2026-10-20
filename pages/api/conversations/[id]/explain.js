@@ -15,7 +15,7 @@ export default async function handler(request, response) {
   if (!generated.success) return response.status(422).json(generated);
   const validation = validateSql(generated.sql, session.schema);
   if (!validation.valid) return response.status(422).json({ success: false, reason: 'sql_validation_failed', validation });
-  const result = executeSql(generated.sql, generated.parameters, session.schema);
+  const result = await executeSql(generated.sql, generated.parameters, session.schema);
   if (!result.success) return response.status(422).json({ ...result, validation });
 
   const question = [...session.messages].reverse().find((message) => message.role === 'user')?.content || '';

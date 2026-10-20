@@ -1,4 +1,4 @@
-import { getDatabase } from '../db/index.js';
+import { getDatabase, getDatabaseAdapter } from '../db/index.js';
 import { validateSql } from './validator.js';
 
 /** Hard upper bound for rows returned by one query execution. */
@@ -22,7 +22,7 @@ function jsonSafe(value) {
 }
 
 /**
- * Execute one validated, schema-bound SELECT against the seeded SQLite DB.
+ * Execute one validated, schema-bound SELECT against the active database.
  * Validation is repeated here so direct callers cannot bypass the final
  * security gate. Errors are generic and never expose paths or stack traces.
  */
@@ -31,7 +31,7 @@ export function executeSql(sqlOrInput, parametersOrSchema = [], schemaOrOptions,
   const sql = input ? input.sql : sqlOrInput;
   const parameters = input ? input.parameters : parametersOrSchema;
   const schema = input ? input.schema : schemaOrOptions;
-  const databaseFactory = input?.databaseFactory || executionOptions.databaseFactory || getDatabase;
+  const customDatabaseFactory = input?.databaseFactory || executionOptions.databaseFactory;
 
   const validation = validateSql(sql, schema);
   if (!validation.valid) return failure('sql_validation_failed', validation.error, validation);
@@ -40,17 +40,34 @@ export function executeSql(sqlOrInput, parametersOrSchema = [], schemaOrOptions,
     return failure('sql_validation_failed', parameterValidation.error, parameterValidation);
   }
 
-  let database;
+  if (customDatabaseFactory) {
+    let database;
+    try {
+      database = customDatabaseFactory();
+      const statement = database.prepare(sql);
+      const rows = statement.all(...parameters).slice(0, MAX_RESULT_ROWS).map(jsonSafe);
+      const columns = statement.columns().map(({ name }) => name);
+      return { success: true, columns, rows, rowCount: rows.length };
+    } catch (_error) {
+      return failure('execution_error', 'The query could not be executed.');
+    } finally {
+      database?.close();
+    }
+  }
+
+  const adapter = getDatabaseAdapter();
+  if (adapter.isAsync) {
+    return adapter
+      .execute(sql, parameters, { maxRows: MAX_RESULT_ROWS })
+      .then((result) => ({ success: true, ...result }))
+      .catch(() => failure('execution_error', 'The query could not be executed.'));
+  }
+
   try {
-    database = databaseFactory();
-    const statement = database.prepare(sql);
-    const rows = statement.all(...parameters).slice(0, MAX_RESULT_ROWS).map(jsonSafe);
-    const columns = statement.columns().map(({ name }) => name);
-    return { success: true, columns, rows, rowCount: rows.length };
+    const result = adapter.execute(sql, parameters, { maxRows: MAX_RESULT_ROWS });
+    return { success: true, ...result };
   } catch (_error) {
     return failure('execution_error', 'The query could not be executed.');
-  } finally {
-    database?.close();
   }
 }
 

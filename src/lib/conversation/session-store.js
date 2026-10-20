@@ -40,6 +40,16 @@ export function updateSession(id, updater) {
   return copy(next);
 }
 
+export function listSessions() {
+  return [...sessions.values()]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .map(copy);
+}
+
+export function deleteSession(id) {
+  return sessions.delete(id);
+}
+
 export function clearSessions() {
   sessions.clear();
 }

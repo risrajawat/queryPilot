@@ -1,5 +1,4 @@
-import { getDatabase } from '../../src/lib/db/index.js';
-import { getDatabaseSchema } from '../../src/lib/db/schema-introspection.js';
+import { getDatabaseAdapter } from '../../src/lib/db/index.js';
 
 export default function handler(request, response) {
   if (request.method && request.method !== 'GET') {
@@ -7,14 +6,20 @@ export default function handler(request, response) {
     return response.status(405).json({ error: 'Method not allowed' });
   }
 
-  let database;
   try {
-    database = getDatabase(undefined, { seed: false });
-    const schema = getDatabaseSchema(database);
-    return response.status(200).json({ schema, compactSchema: schema.compact });
-  } catch (_error) {
+    const adapter = getDatabaseAdapter();
+    const schemaResult = adapter.getSchema();
+    if (schemaResult && typeof schemaResult.then === 'function') {
+      return schemaResult
+        .then((schema) => response.status(200).json({ schema, compactSchema: schema.compact }))
+        .catch((err) => {
+          console.error('[Schema Error]:', err.message);
+          return response.status(500).json({ error: 'Unable to read database schema' });
+        });
+    }
+    return response.status(200).json({ schema: schemaResult, compactSchema: schemaResult.compact });
+  } catch (err) {
+    console.error('[Schema Error]:', err.message);
     return response.status(500).json({ error: 'Unable to read database schema' });
-  } finally {
-    database?.close();
   }
 }

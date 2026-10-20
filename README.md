@@ -104,19 +104,72 @@ npm test
 
 Tests use in-memory SQLite and do not require network access or a pre-existing database.
 
+## Database Architecture
+
+QueryPilot uses a clean database abstraction supporting dual database targets:
+
+```text
+LOCAL DEVELOPMENT:
+QueryPilot -> Database Abstraction -> better-sqlite3 -> Local SQLite file (data/querypilot.sqlite)
+
+VERCEL PRODUCTION:
+QueryPilot -> Database Abstraction -> @libsql/client -> Turso / libSQL cloud database
+```
+
+### Local SQLite
+
+```sh
+npm run db:seed
+npm run dev
+```
+
+### Vercel Production & Turso Setup
+
+For serverless deployments (Vercel), local filesystem storage (`/var/task`) cannot be used. QueryPilot automatically connects to Turso when `TURSO_DATABASE_URL` is configured.
+
+1. **Create Turso Database**:
+   ```sh
+   turso db create querypilot
+   turso db show --url querypilot
+   turso db tokens create querypilot
+   ```
+
+2. **Seed Turso Database**:
+   Add credentials to `.env.local`:
+   ```sh
+   TURSO_DATABASE_URL=libsql://your-database-name.turso.io
+   TURSO_AUTH_TOKEN=your-auth-token
+   ```
+   Run the seeding script:
+   ```sh
+   npm run db:seed:turso
+   ```
+
+3. **Configure Vercel Environment Variables**:
+   In Vercel Project Settings → Environment Variables:
+   - `TURSO_DATABASE_URL`: Your `libsql://...` database URL (Production & Preview)
+   - `TURSO_AUTH_TOKEN`: Your Turso authorization token (Production & Preview)
+
+4. **Verify Deployment**:
+   - `GET /api/health` → `{"status":"ok","provider":"turso"}`
+   - `GET /api/explorer` → Lists tables and row counts
+   - `GET /api/explorer?table=customers` → Lists real customer records
+
 ## Project structure
 
 ```text
-pages/              Next.js pages and API routes
-src/lib/db/         SQLite schema, seed data, database access, and introspection
-src/lib/conversation/ Session state, intent analysis, clarification, and message engine
-src/lib/sql/         SQL generation, validation, and read-only execution
-src/lib/results/     Verified-result explanation with deterministic fallback
-src/lib/db/explorer.js Read-only schema-backed table previews
-src/lib/ai/         Server-side provider abstraction and deterministic fallback
-scripts/             Local database commands
-tests/               Vitest database tests
-styles/              Global styles for the UI shell
+pages/                  Next.js pages and API routes
+src/lib/db/             Database abstraction, local SQLite, Turso client, schema, and seed data
+src/lib/db/adapter.js   Unified database adapter (SqliteAdapter and TursoAdapter)
+src/lib/db/turso.js     Turso / libSQL client, initialization, introspection, and queries
+src/lib/conversation/   Session state, intent analysis, clarification, and message engine
+src/lib/sql/            SQL generation, validation, and read-only execution
+src/lib/results/        Verified-result explanation with deterministic fallback
+src/lib/db/explorer.js  Read-only schema-backed table previews
+src/lib/ai/             Server-side provider abstraction and deterministic fallback
+scripts/                Database commands (seed-db.js, seed-turso.js)
+tests/                  Vitest unit and integration tests
+styles/                 Global styles for modern SaaS UI shell
 ```
 
 ## Production / Docker

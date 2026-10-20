@@ -1,5 +1,4 @@
-import { getDatabase } from '../../src/lib/db/index.js';
-import { getExplorerData } from '../../src/lib/db/explorer.js';
+import { getDatabaseAdapter } from '../../src/lib/db/index.js';
 
 export default function handler(request, response) {
   if (request.method !== 'GET') {
@@ -17,14 +16,22 @@ export default function handler(request, response) {
     return response.status(400).json({ error: 'Invalid table' });
   }
 
-  let database;
   try {
-    database = getDatabase();
-    return response.status(200).json(getExplorerData(database, table || null));
+    const adapter = getDatabaseAdapter();
+    const dataResult = adapter.getExplorerData(table || null);
+    if (dataResult && typeof dataResult.then === 'function') {
+      return dataResult
+        .then((data) => response.status(200).json(data))
+        .catch((error) => {
+          if (error.code === 'UNKNOWN_TABLE') return response.status(400).json({ error: 'Unknown table' });
+          console.error('[Explorer Error]:', error.message);
+          return response.status(500).json({ error: 'Unable to read database explorer data' });
+        });
+    }
+    return response.status(200).json(dataResult);
   } catch (error) {
     if (error.code === 'UNKNOWN_TABLE') return response.status(400).json({ error: 'Unknown table' });
+    console.error('[Explorer Error]:', error.message);
     return response.status(500).json({ error: 'Unable to read database explorer data' });
-  } finally {
-    database?.close();
   }
 }
