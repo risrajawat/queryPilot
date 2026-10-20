@@ -54,7 +54,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [inputLoading, setInputLoading] = useState(false);
   const inFlight = useRef(false);
-  const conversationEndRef = useRef(null);
+  const chatViewportRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -64,7 +64,10 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
-  useEffect(() => { conversationEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [turns]);
+  useEffect(() => {
+    const viewport = chatViewportRef.current;
+    if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+  }, [turns]);
 
   const setTurn = (id, patch) => setTurns((current) => updateTurn(current, id, typeof patch === 'function' ? patch(current.find((turn) => turn.id === id)) : patch));
   const sendMessage = async (text = input, resolvedTurnId = null) => {
@@ -132,11 +135,14 @@ export default function Home() {
     <aside className="sidebar"><div className="brand"><div className="brand-mark" aria-hidden="true">Q</div><span>QueryPilot</span></div><div className="sidebar-content"><button className="new-query" type="button" onClick={startNewConversation}><span>+</span>New query</button><div className="sidebar-section"><p className="sidebar-label">Workspace</p><div className="workspace-card"><span className="workspace-icon">◈</span><span><strong>Commerce</strong><small>SQLite database</small></span><span className="chevron">⌄</span></div></div></div><div className="sidebar-footer"><div className="status-row"><span className={`status-dot ${health}`} /><span>{healthLabel}</span></div><p className="version">QueryPilot <span>v0.1</span></p></div></aside>
     <section className="main-panel"><header className="topbar"><div className="mobile-brand brand"><div className="brand-mark">Q</div><span>QueryPilot</span></div><div className="topbar-context"><span className="context-dot" />Commerce workspace</div><button className="avatar" type="button" disabled>JD</button></header>
       <div className="content-wrap"><div className="hero"><p className="kicker">Your data, made clear</p><h1>What would you like<br className="desktop-break" /> to know?</h1><p className="hero-copy">Ask questions in plain English and get closer to the insight behind your data.</p></div>
-        <div className="query-card"><div className="query-card-top"><span className="query-icon">⌕</span><span className="query-label">{conversationId ? 'Conversation' : 'New conversation'}</span></div><textarea aria-label="Query input" className="query-input" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Ask anything about your data..." rows={3} /><div className="query-card-bottom"><span className="input-hint">{inputLoading ? 'Working…' : 'Press Enter to send · Shift + Enter for a new line'}</span><button className="send-button" type="button" disabled={!input.trim() || inputLoading} onClick={() => sendMessage()}><span>{inputLoading ? 'Working' : 'Send'}</span><span>↑</span></button></div></div>
-        {turns.length > 0 && <section className="conversation" aria-label="Conversation">{turns.map((turn) => <article className="turn" key={turn.id}><div className="message-row user"><div className="message-bubble"><span className="message-role">You</span><p>{turn.userMessage}</p></div></div><div className="message-row assistant"><div className="message-bubble"><span className="message-role">QueryPilot</span>{turn.assistant ? <p>{turn.assistant}</p> : turn.loading ? <p className="typing" aria-live="polite">QueryPilot is thinking…</p> : turn.error ? <p>I couldn’t complete that query.</p> : turn.results ? <p>Here are the results.</p> : null}{turn.clarification && <p className="clarification-question">{turn.clarification}</p>}{turn.choices.length > 0 && <div className="choice-list">{turn.choices.map((choice) => <button key={`${turn.id}-${choice.value}`} type="button" onClick={() => sendMessage(choice.value)} disabled={inputLoading}>{choice.label}</button>)}</div>}</div></div>{turn.error && <p className="request-error" role="alert">{turn.error}</p>}<SqlPreview preview={turn.sqlPreview} /><Results results={turn.results} /></article>)}</section>}
-        <div ref={conversationEndRef} aria-hidden="true" />
+         <section ref={chatViewportRef} className={`chat-viewport ${turns.length ? 'has-messages' : ''}`} aria-label="Conversation">
+           {turns.length > 0 ? <div className="conversation">{turns.map((turn) => <article className="turn" key={turn.id}>
+             <div className="message-row user"><div className="message-bubble"><span className="message-role">You</span><p>{turn.userMessage}</p></div></div>
+             <div className="message-row assistant"><div className="message-bubble"><span className="message-role">QueryPilot</span>{turn.assistant ? <p>{turn.assistant}</p> : turn.loading ? <p className="typing" aria-live="polite">QueryPilot is thinking…</p> : turn.error ? <p>I couldn’t complete that query.</p> : turn.results ? <p>Here are the results.</p> : null}{turn.clarification && <p className="clarification-question">{turn.clarification}</p>}{turn.choices.length > 0 && <div className="choice-list">{turn.choices.map((choice) => <button key={`${turn.id}-${choice.value}`} type="button" onClick={() => sendMessage(choice.value)} disabled={inputLoading}>{choice.label}</button>)}</div>}{turn.error && <p className="request-error" role="alert">{turn.error}</p>}<SqlPreview preview={turn.sqlPreview} /><Results results={turn.results} /></div></div>
+           </article>)}</div> : <div className="chat-empty"><span className="empty-note-icon">✦</span><span>Your conversations will appear here once you start exploring.</span></div>}
+         </section>
+         <div className="query-card"><div className="query-card-top"><span className="query-icon">⌕</span><span className="query-label">{conversationId ? 'Conversation' : 'New conversation'}</span></div><textarea aria-label="Query input" className="query-input" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Ask anything about your data..." rows={3} /><div className="query-card-bottom"><span className="input-hint">{inputLoading ? 'Working…' : 'Press Enter to send · Shift + Enter for a new line'}</span><button className="send-button" type="button" disabled={!input.trim() || inputLoading} onClick={() => sendMessage()}><span>{inputLoading ? 'Working' : 'Send'}</span><span>↑</span></button></div></div>
         <section className="suggestions" aria-labelledby="suggestion-title"><div className="section-heading"><h2 id="suggestion-title">Try asking</h2><span>Sample prompts</span></div><div className="suggestion-grid">{suggestions.map((suggestion) => <button className="suggestion-card" type="button" key={suggestion.prompt} onClick={() => setInput(suggestion.prompt)}><div className="suggestion-icon">{suggestion.icon}</div><div><p className="suggestion-eyebrow">{suggestion.eyebrow}</p><p className="suggestion-prompt">{suggestion.prompt}</p></div><span className="suggestion-arrow">↗</span></button>)}</div></section>
-        <div className={`empty-note ${turns.length ? 'has-messages' : ''}`}><span className="empty-note-icon">✦</span><span>Your conversations will appear here once you start exploring.</span></div>
       </div></section>
   </main>;
 }
