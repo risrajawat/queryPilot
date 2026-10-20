@@ -1,6 +1,6 @@
 # QueryPilot
 
-Phase 5 adds a capped, schema-bound execution layer on top of Phase 4. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, resolves follow-ups, produces validated SQLite `SELECT` queries, and executes only resolved generated queries. SQL is never accepted from the browser.
+Phase 6 adds concise natural-language explanations on top of the verified Phase 5 result. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, produces validated SQLite `SELECT` queries, executes only resolved generated queries, and explains only the returned columns and rows. SQL is never accepted from the browser.
 
 ## Setup
 
@@ -80,7 +80,17 @@ Supported intents are customer ranking by delivered-order revenue, order count, 
 
 Execution returns `{ columns, rows, rowCount }` with JSON-safe values and caps returned rows at 100. A valid query with no rows returns `success: true` and `rowCount: 0`; the UI displays `No results found.`. Validation failures return `reason: sql_validation_failed`, while database failures return the generic `reason: execution_error` without paths or stack traces. The execution layer repeats the Phase 4 validator as its mandatory security gate, and only server-generated, validated `SELECT` statements can execute.
 
-The initial UI is available at `http://localhost:3000`. The existing QueryPilot design can send questions, display conversation messages and clarification choices, show generated/validated/executed SQL status, and render dynamic result tables from the returned columns and rows. It does not execute SQL in the browser or display fabricated results.
+### Verified result explanation API
+
+After execution, the UI calls:
+
+```sh
+curl -X POST http://localhost:3000/api/conversations/<id>/explain
+```
+
+The browser sends only the conversation ID. The server regenerates, validates, and executes the query through the existing Phase 5 path, then passes only the verified question, intent, columns, rows, and row count to `src/lib/results/explainer.js`. At most 20 verified rows are provided to the explanation provider; the actual result table remains unchanged. Empty results use `No results found for this query.`. If explanation fails, execution remains successful and the UI keeps the real results while showing that the explanation is unavailable.
+
+The initial UI is available at `http://localhost:3000`. The existing QueryPilot design can send questions, display conversation messages and clarification choices, show generated/validated/executed/explained status, render a concise verified explanation above each dynamic result table, and keep SQL details secondary. It does not execute SQL in the browser or display fabricated results.
 
 ## Test
 
@@ -96,7 +106,8 @@ Tests use in-memory SQLite and do not require network access or a pre-existing d
 pages/              Next.js pages and API routes
 src/lib/db/         SQLite schema, seed data, database access, and introspection
 src/lib/conversation/ Session state, intent analysis, clarification, and message engine
-src/lib/sql/      SQL generation, validation, and read-only execution
+src/lib/sql/         SQL generation, validation, and read-only execution
+src/lib/results/     Verified-result explanation with deterministic fallback
 src/lib/ai/         Server-side provider abstraction and deterministic fallback
 scripts/             Local database commands
 tests/               Vitest database tests

@@ -15,6 +15,8 @@ export function createTurn(userMessage, id = `turn-${Date.now()}-${Math.random()
     choices: [],
     sqlPreview: null,
     results: null,
+    explanation: '',
+    explanationStatus: null,
     error: '',
     loading: true,
     stage: 'Generating query',

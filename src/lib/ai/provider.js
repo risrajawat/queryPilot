@@ -3,6 +3,10 @@ export class DeterministicProvider {
   async complete() {
     return '';
   }
+
+  async explainResult() {
+    return '';
+  }
 }
 
 // Reserved adapter boundary. No credentials, network calls, or API behavior are invented here.
@@ -12,6 +16,10 @@ export class Gpt6AstraProvider {
   }
 
   async complete() {
+    throw new Error('GPT-6 Astra provider adapter is not configured');
+  }
+
+  async explainResult() {
     throw new Error('GPT-6 Astra provider adapter is not configured');
   }
 }

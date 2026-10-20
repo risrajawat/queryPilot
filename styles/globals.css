@@ -91,6 +91,9 @@ h1 { margin: 0; color: #182624; font-size: clamp(36px, 5vw, 53px); font-weight: 
 .choice-list button { padding: 8px 11px; border: 1px solid #c5d8cf; border-radius: 6px; color: #25685d; background: #fff; font-size: 11px; cursor: pointer; transition: background .15s, border-color .15s; }
 .choice-list button:hover { border-color: #8eb9a8; background: var(--mint); }
 .typing { color: #81908c; font-style: italic; }
+.explanation-status { margin-top: 10px !important; color: #8a938f; font-size: 12px; font-style: italic; }
+.result-explanation { margin-top: 10px !important; color: #263c36; font-size: 13px; line-height: 1.6; }
+.explanation-error { margin-top: 10px !important; color: #8c625c; font-size: 12px; }
 .sql-preview { margin-top: 16px; padding: 12px 14px; border: 1px solid #d7dfdc; border-radius: 7px; background: #f3f5f4; }
 .sql-preview-heading { display: flex; align-items: center; justify-content: space-between; color: #71817d; font: 10px 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
 .sql-preview-heading strong { color: var(--mint-strong); font-weight: 500; }

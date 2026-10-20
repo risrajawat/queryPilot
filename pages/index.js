@@ -30,16 +30,17 @@ function Results({ results }) {
   </section>;
 }
 
-function SqlPreview({ preview }) {
+function SqlPreview({ preview, explanationStatus }) {
   if (!preview) return null;
   const failed = preview.status === 'error' || preview.status === 'execution-error';
   return <section className={`sql-preview ${preview.status}`} aria-label="Development SQL preview">
     <div className="sql-preview-heading"><span>Development SQL preview</span>
       {preview.status === 'generating' && <strong>Generating…</strong>}
       {preview.status === 'error' && <strong>Unavailable</strong>}
-      {['generated', 'validated', 'executed', 'execution-error'].includes(preview.status) && <span className="sql-status-track">
+                {['generated', 'validated', 'executed', 'execution-error'].includes(preview.status) && <span className="sql-status-track">
         <strong className="complete">Generated ✓</strong><strong className={preview.status === 'generated' ? 'current' : 'complete'}>{preview.status === 'generated' ? 'Validating…' : 'Validated ✓'}</strong>
-        <strong className={preview.status === 'execution-error' ? 'failed' : preview.status === 'executed' ? 'complete' : ''}>{preview.status === 'execution-error' ? 'Execution failed' : preview.status === 'executed' ? 'Executed ✓' : 'Executing…'}</strong>
+                <strong className={preview.status === 'execution-error' ? 'failed' : preview.status === 'executed' ? 'complete' : ''}>{preview.status === 'execution-error' ? 'Execution failed' : preview.status === 'executed' ? 'Executed ✓' : 'Executing…'}</strong>
+                {preview.status === 'executed' && <strong className={explanationStatus === 'complete' ? 'complete' : explanationStatus === 'error' ? 'failed' : 'current'}>{explanationStatus === 'complete' ? 'Explained ✓' : explanationStatus === 'error' ? 'Explanation unavailable' : 'Explaining…'}</strong>}
       </span>}
     </div>
     {failed ? <p className="sql-preview-error">{preview.error}</p> : <pre>{preview.sql || 'Preparing read-only SQL…'}</pre>}
@@ -119,7 +120,15 @@ export default function Home() {
           const executeResponse = await fetch(`/api/conversations/${encodeURIComponent(id)}/execute`, { method: 'POST' });
           const executePayload = await executeResponse.json().catch(() => ({}));
           if (!executeResponse.ok || executePayload.success === false) throw new Error(executePayload.error || 'The query could not be executed.');
-          setTurn(turn.id, { results: { columns: Array.isArray(executePayload.columns) ? executePayload.columns : [], rows: Array.isArray(executePayload.rows) ? executePayload.rows : [], rowCount: Number.isFinite(executePayload.rowCount) ? executePayload.rowCount : 0 }, sqlPreview: { status: 'executed', sql: executePayload.sql || generatedSql } });
+           const verifiedResults = { columns: Array.isArray(executePayload.columns) ? executePayload.columns : [], rows: Array.isArray(executePayload.rows) ? executePayload.rows : [], rowCount: Number.isFinite(executePayload.rowCount) ? executePayload.rowCount : 0 };
+           setTurn(turn.id, { results: verifiedResults, explanationStatus: 'generating', sqlPreview: { status: 'executed', sql: executePayload.sql || generatedSql } });
+           const explanationResponse = await fetch(`/api/conversations/${encodeURIComponent(id)}/explain`, { method: 'POST' });
+           const explanationPayload = await explanationResponse.json().catch(() => ({}));
+           if (!explanationResponse.ok || explanationPayload.success === false) {
+             setTurn(turn.id, { explanationStatus: 'error', explanationError: 'The query executed successfully, but an explanation could not be generated.' });
+           } else {
+             setTurn(turn.id, { explanation: explanationPayload.explanation || '', explanationStatus: 'complete' });
+           }
         } catch (sqlError) {
           const message = sqlError.message || 'SQL preview unavailable';
           setTurn(turn.id, (current) => ({ sqlPreview: { status: executionStarted ? 'execution-error' : 'error', sql: current.sqlPreview?.sql || '', error: message }, error: `${executionStarted ? 'Query execution failed' : 'SQL preview unavailable'}: ${message}` }));
@@ -138,7 +147,7 @@ export default function Home() {
          <section ref={chatViewportRef} className={`chat-viewport ${turns.length ? 'has-messages' : ''}`} aria-label="Conversation">
            {turns.length > 0 ? <div className="conversation">{turns.map((turn) => <article className="turn" key={turn.id}>
              <div className="message-row user"><div className="message-bubble"><span className="message-role">You</span><p>{turn.userMessage}</p></div></div>
-             <div className="message-row assistant"><div className="message-bubble"><span className="message-role">QueryPilot</span>{turn.assistant ? <p>{turn.assistant}</p> : turn.loading ? <p className="typing" aria-live="polite">QueryPilot is thinking…</p> : turn.error ? <p>I couldn’t complete that query.</p> : turn.results ? <p>Here are the results.</p> : null}{turn.clarification && <p className="clarification-question">{turn.clarification}</p>}{turn.choices.length > 0 && <div className="choice-list">{turn.choices.map((choice) => <button key={`${turn.id}-${choice.value}`} type="button" onClick={() => sendMessage(choice.value)} disabled={inputLoading}>{choice.label}</button>)}</div>}{turn.error && <p className="request-error" role="alert">{turn.error}</p>}<SqlPreview preview={turn.sqlPreview} /><Results results={turn.results} /></div></div>
+              <div className="message-row assistant"><div className="message-bubble"><span className="message-role">QueryPilot</span>{turn.assistant ? <p>{turn.assistant}</p> : turn.loading ? <p className="typing" aria-live="polite">QueryPilot is thinking…</p> : turn.error ? <p>I couldn’t complete that query.</p> : turn.results ? <p>Here are the results.</p> : null}{turn.clarification && <p className="clarification-question">{turn.clarification}</p>}{turn.choices.length > 0 && <div className="choice-list">{turn.choices.map((choice) => <button key={`${turn.id}-${choice.value}`} type="button" onClick={() => sendMessage(choice.value)} disabled={inputLoading}>{choice.label}</button>)}</div>}{turn.explanationStatus === 'generating' && <p className="explanation-status">Preparing a concise explanation…</p>}{turn.explanation && <p className="result-explanation">{turn.explanation}</p>}{turn.explanationStatus === 'error' && <p className="explanation-error">{turn.explanationError}</p>}{turn.error && <p className="request-error" role="alert">{turn.error}</p>}<SqlPreview preview={turn.sqlPreview} explanationStatus={turn.explanationStatus} /><Results results={turn.results} /></div></div>
            </article>)}</div> : <div className="chat-empty"><span className="empty-note-icon">✦</span><span>Your conversations will appear here once you start exploring.</span></div>}
          </section>
          <div className="query-card"><div className="query-card-top"><span className="query-icon">⌕</span><span className="query-label">{conversationId ? 'Conversation' : 'New conversation'}</span></div><textarea aria-label="Query input" className="query-input" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="Ask anything about your data..." rows={3} /><div className="query-card-bottom"><span className="input-hint">{inputLoading ? 'Working…' : 'Press Enter to send · Shift + Enter for a new line'}</span><button className="send-button" type="button" disabled={!input.trim() || inputLoading} onClick={() => sendMessage()}><span>{inputLoading ? 'Working' : 'Send'}</span><span>↑</span></button></div></div>
