@@ -68,7 +68,7 @@ export function generateSql(intent, compactSchema, conversationContext = {}) {
   if (name === 'order_summary') {
     const order = required(tables, ['orders', 'order'], { id: ['id'], customer: ['customer_id'], status: ['status'], total: ['total_cents', 'total'], date: ['ordered_at', 'created_at'] });
     if (!order) return unsupported('The schema does not contain the columns required for an order summary.');
-    const c = order.columns;
+     const c = order.columns;
      const where = filters(conversationContext, order.table, 'o');
     return { success: true, sql: `SELECT o.${quote(c.id)} AS order_id, o.${quote(c.customer)} AS customer_id, o.${quote(c.status)} AS status, o.${quote(c.total)} AS total_cents, o.${quote(c.date)} AS ordered_at FROM ${quote(order.table.name)} o${where.clauses.length ? ` WHERE ${where.clauses.join(' AND ')}` : ''} ORDER BY o.${quote(c.date)} DESC`, parameters: where.parameters, explanation: 'Summarizes orders using schema-backed order fields.' };
   }
@@ -91,7 +91,8 @@ export function generateSql(intent, compactSchema, conversationContext = {}) {
     const aggregate = metric === 'total_revenue' ? `SUM(o.${quote(order.columns.total)})` : metric === 'order_count' ? `COUNT(o.${quote(order.columns.id)})` : `MAX(o.${quote(order.columns.date)})`;
     const label = metric === 'total_revenue' ? 'total_revenue' : metric === 'order_count' ? 'order_count' : 'last_purchase';
      const where = filters(conversationContext, order.table, 'o');
-     const completedStatus = findColumn(order.table, ['status']) ? `o.${quote(findColumn(order.table, ['status']))} = 'delivered'` : null;
+     const statusColumn = findColumn(order.table, ['status']);
+     const completedStatus = statusColumn ? `o.${quote(statusColumn)} = 'delivered'` : null;
      if (completedStatus) where.clauses.push(completedStatus);
     return { success: true, sql: `SELECT c.${quote(customer.columns.id)} AS customer_id, c.${quote(customer.columns.first)} AS first_name, c.${quote(customer.columns.last)} AS last_name, ${aggregate} AS ${label} FROM ${quote(customer.table.name)} c JOIN ${quote(order.table.name)} o ON o.${quote(order.columns.customer)} = c.${quote(customer.columns.id)}${where.clauses.length ? ` WHERE ${where.clauses.join(' AND ')}` : ''} GROUP BY c.${quote(customer.columns.id)}, c.${quote(customer.columns.first)}, c.${quote(customer.columns.last)} ORDER BY ${label} DESC`, parameters: where.parameters, explanation: `Ranks customers by ${metric.replaceAll('_', ' ')} using the provided schema.` };
   }

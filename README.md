@@ -1,6 +1,6 @@
 # QueryPilot
 
-Phase 4 adds a schema-aware, read-only SQL generation and validation layer on top of the Phase 3 conversation backend. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, resolves follow-ups, and produces validated SQLite `SELECT` previews. SQL is never executed by the generator endpoint.
+Phase 5 adds a capped, schema-bound execution layer on top of Phase 4. It tracks conversation state, analyzes intents, asks deterministic clarifying questions, resolves follow-ups, produces validated SQLite `SELECT` queries, and executes only resolved generated queries. SQL is never accepted from the browser.
 
 ## Setup
 
@@ -54,9 +54,33 @@ curl -X POST http://localhost:3000/api/conversations/<id>/sql
 
 The endpoint uses the session's compact schema, current intent, resolved context, and messages. It rejects pending clarifications, unknown schema identifiers, comments, multiple statements, and all non-`SELECT` or mutating SQL. The response contains `sql`, parameter values, an explanation, and validator status; it does not run the query.
 
-Supported Phase 4 intents are customer ranking by delivered-order revenue, order count, or latest purchase; customer listing; order summaries; and product inventory. Generation is deterministic for the offline MVP, schema-bound, and returns a structured `unsupported_intent` result when required identifiers are absent. User-supplied filter values are represented as `?` parameters rather than interpolated into SQL. Validation allows only one `SELECT`, rejects comments and write/admin/transaction statements, and checks referenced tables, aliases, and columns against the compact schema. The UI's development preview is explicitly marked `Preview only · SQL is not executed`; result rendering is not implemented yet.
+### SQL execution API
 
-The initial UI is available at `http://localhost:3000`. The existing QueryPilot design can send questions, display conversation messages and clarification choices, and show a small validated SQL preview after a clear intent. It does not execute SQL or display query results.
+After an intent is resolved, execute its generated query with:
+
+```sh
+curl -X POST http://localhost:3000/api/conversations/<id>/execute
+```
+
+The endpoint accepts only the conversation id. It rejects missing, pending, or unresolved sessions, generates and validates SQL server-side, and then runs it against the seeded SQLite database. The executor repeats the Phase 4 validator as its mandatory final security gate, accepts only safe bound parameters, returns JSON-safe `columns`, `rows`, and `rowCount`, and caps results at 100 rows. Database failures return a generic error without paths or stack traces.
+
+Example successful response:
+
+```json
+{
+  "success": true,
+  "intent": { "name": "customer_ranking", "metric": "total_revenue" },
+  "columns": ["customer_id", "first_name", "last_name", "total_revenue"],
+  "rows": [{ "customer_id": 1, "first_name": "Maya", "last_name": "Chen", "total_revenue": 28337 }],
+  "rowCount": 1
+}
+```
+
+Supported intents are customer ranking by delivered-order revenue, order count, or latest purchase; customer listing; order summaries; and product inventory. Generation is deterministic for the offline MVP, schema-bound, and returns a structured `unsupported_intent` result when required identifiers are absent. User-supplied filter values are represented as `?` parameters rather than interpolated into SQL. Validation allows only one `SELECT`, rejects comments and write/admin/transaction statements, and checks referenced tables, aliases, and columns against the compact schema.
+
+Execution returns `{ columns, rows, rowCount }` with JSON-safe values and caps returned rows at 100. A valid query with no rows returns `success: true` and `rowCount: 0`; the UI displays `No results found.`. Validation failures return `reason: sql_validation_failed`, while database failures return the generic `reason: execution_error` without paths or stack traces. The execution layer repeats the Phase 4 validator as its mandatory security gate, and only server-generated, validated `SELECT` statements can execute.
+
+The initial UI is available at `http://localhost:3000`. The existing QueryPilot design can send questions, display conversation messages and clarification choices, show generated/validated/executed SQL status, and render dynamic result tables from the returned columns and rows. It does not execute SQL in the browser or display fabricated results.
 
 ## Test
 
@@ -72,6 +96,7 @@ Tests use in-memory SQLite and do not require network access or a pre-existing d
 pages/              Next.js pages and API routes
 src/lib/db/         SQLite schema, seed data, database access, and introspection
 src/lib/conversation/ Session state, intent analysis, clarification, and message engine
+src/lib/sql/      SQL generation, validation, and read-only execution
 src/lib/ai/         Server-side provider abstraction and deterministic fallback
 scripts/             Local database commands
 tests/               Vitest database tests

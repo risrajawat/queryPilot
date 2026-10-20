@@ -24,8 +24,10 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [queryStage, setQueryStage] = useState('');
   const [error, setError] = useState('');
   const [sqlPreview, setSqlPreview] = useState(null);
+  const [results, setResults] = useState(null);
   const conversationEndRef = useRef(null);
 
   useEffect(() => {
@@ -64,8 +66,10 @@ export default function Home() {
 
     setError('');
     setInput('');
+    setResults(null);
     setMessages((current) => [...current, { role: 'user', content }]);
     setLoading(true);
+    setQueryStage('Generating query');
 
     try {
       let id = conversationId;
@@ -113,6 +117,7 @@ export default function Home() {
       const isClearIntent = intent?.status === 'clear' && !clarification?.pending;
       if (isClearIntent) {
         setSqlPreview({ status: 'generating', sql: '' });
+        let executionStarted = false;
         try {
           const sqlResponse = await fetch(`/api/conversations/${encodeURIComponent(id)}/sql`, {
             method: 'POST',
@@ -130,17 +135,40 @@ export default function Home() {
             || sqlPayload.query
             || sqlPayload.result?.sql;
           if (!generatedSql) throw new Error('The SQL response did not include a query');
+          setSqlPreview({ status: 'generated', sql: generatedSql });
+          setQueryStage('Validating');
           setSqlPreview({ status: 'validated', sql: generatedSql });
+
+          setQueryStage('Executing query');
+          executionStarted = true;
+          const executeResponse = await fetch(`/api/conversations/${encodeURIComponent(id)}/execute`, {
+            method: 'POST',
+          });
+          const executePayload = await executeResponse.json().catch(() => ({}));
+          if (!executeResponse.ok || executePayload.success === false) {
+            throw new Error(executePayload.error || 'The query could not be executed.');
+          }
+          setResults({
+            columns: Array.isArray(executePayload.columns) ? executePayload.columns : [],
+            rows: Array.isArray(executePayload.rows) ? executePayload.rows : [],
+            rowCount: Number.isFinite(executePayload.rowCount) ? executePayload.rowCount : 0,
+          });
+          setSqlPreview({ status: 'executed', sql: executePayload.sql || generatedSql });
         } catch (sqlError) {
           const message = sqlError.message || 'SQL preview unavailable';
-          setSqlPreview({ status: 'error', sql: '', error: message });
-          setError(`SQL preview unavailable: ${message}`);
+          setSqlPreview((current) => ({
+            status: current?.status === 'validated' || current?.status === 'generated' ? 'execution-error' : 'error',
+            sql: current?.sql || '',
+            error: message,
+          }));
+          setError(`${executionStarted ? 'Query execution failed' : 'SQL preview unavailable'}: ${message}`);
         }
       }
     } catch (requestError) {
       setError(requestError.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
+      setQueryStage('');
     }
   };
 
@@ -151,6 +179,8 @@ export default function Home() {
     setInput('');
     setError('');
     setSqlPreview(null);
+    setResults(null);
+    setQueryStage('');
   };
 
   return (
@@ -229,9 +259,9 @@ export default function Home() {
               rows={3}
             />
             <div className="query-card-bottom">
-              <span className="input-hint">{loading ? 'Thinking...' : 'Press Enter to send · Shift + Enter for a new line'}</span>
+              <span className="input-hint">{loading ? `${queryStage || 'Thinking'}…` : 'Press Enter to send · Shift + Enter for a new line'}</span>
               <button className="send-button" type="button" disabled={!input.trim() || loading} onClick={() => sendMessage()} aria-label="Send query">
-                <span>{loading ? 'Sending' : 'Send'}</span>
+                <span>{loading ? 'Working' : 'Send'}</span>
                 <span aria-hidden="true">↑</span>
               </button>
             </div>
@@ -266,16 +296,45 @@ export default function Home() {
             <section className={`sql-preview ${sqlPreview.status}`} aria-label="Development SQL preview">
               <div className="sql-preview-heading">
                 <span>Development SQL preview</span>
-                {sqlPreview.status === 'validated' && <strong>Validated ✓</strong>}
                 {sqlPreview.status === 'generating' && <strong>Generating…</strong>}
                 {sqlPreview.status === 'error' && <strong>Unavailable</strong>}
+                {(sqlPreview.status === 'generated' || sqlPreview.status === 'validated' || sqlPreview.status === 'executed' || sqlPreview.status === 'execution-error') && (
+                  <span className="sql-status-track" aria-label="Query status">
+                    <strong className="complete">Generated ✓</strong>
+                    <strong className={sqlPreview.status === 'generated' ? 'current' : 'complete'}>{sqlPreview.status === 'generated' ? 'Validating…' : 'Validated ✓'}</strong>
+                    <strong className={sqlPreview.status === 'executed' ? 'complete' : sqlPreview.status === 'execution-error' ? 'failed' : ''}>{sqlPreview.status === 'execution-error' ? 'Execution failed' : sqlPreview.status === 'executed' ? 'Executed ✓' : 'Executing…'}</strong>
+                  </span>
+                )}
               </div>
-              {sqlPreview.status === 'error'
+              {sqlPreview.status === 'error' || sqlPreview.status === 'execution-error'
                 ? <p className="sql-preview-error">{sqlPreview.error}</p>
                 : <pre>{sqlPreview.sql || 'Preparing read-only SQL…'}</pre>}
-              <p className="sql-preview-note">Preview only · SQL is not executed</p>
-            </section>
-          )}
+              <p className="sql-preview-note">Read-only SQL · generated and executed securely on the server</p>
+             </section>
+           )}
+
+           {results && (
+             <section className="results-panel" aria-label="Query results">
+               <div className="results-heading">
+                 <span>Query results</span>
+                 <strong>{results.rowCount} {results.rowCount === 1 ? 'row' : 'rows'}</strong>
+               </div>
+               {results.rowCount === 0
+                 ? <p className="no-results">No results found.</p>
+                 : <div className="results-table-wrap">
+                   <table className="results-table">
+                     <thead><tr>{results.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
+                     <tbody>{results.rows.map((row, rowIndex) => (
+                       <tr key={rowIndex}>{results.columns.map((column, columnIndex) => {
+                         const value = Array.isArray(row) ? row[columnIndex] : row?.[column];
+                         const display = value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—');
+                         return <td key={`${rowIndex}-${column}`}>{display}</td>;
+                       })}</tr>
+                     ))}</tbody>
+                   </table>
+                 </div>}
+             </section>
+           )}
 
           <div ref={conversationEndRef} aria-hidden="true" />
 

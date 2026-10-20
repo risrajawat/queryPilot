@@ -90,11 +90,28 @@ h1 { margin: 0; color: #182624; font-size: clamp(36px, 5vw, 53px); font-weight: 
 .sql-preview { margin-top: 18px; padding: 12px 14px; border: 1px solid #dfe9e4; border-radius: 9px; background: #f7faf8; }
 .sql-preview-heading { display: flex; align-items: center; justify-content: space-between; color: #71817d; font: 10px 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
 .sql-preview-heading strong { color: var(--mint-strong); font-weight: 500; }
+.sql-status-track { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.sql-status-track strong { color: #a0aca8; }
+.sql-status-track strong.complete { color: var(--mint-strong); }
+.sql-status-track strong.current { color: #9a7a35; }
+.sql-status-track strong.failed { color: #b65f58; }
 .sql-preview.generating .sql-preview-heading strong { color: #9a7a35; }
+.sql-preview.generated .sql-preview-heading strong { color: #6c7f77; }
+.sql-preview.executed { border-color: #cfe4db; background: #f4fbf7; }
+.sql-preview.execution-error .sql-preview-heading strong { color: #b65f58; }
 .sql-preview.error .sql-preview-heading strong, .sql-preview-error { color: #b65f58; }
 .sql-preview pre { overflow-x: auto; margin: 9px 0 0; color: #354542; font: 11px/1.55 'DM Mono', monospace; white-space: pre-wrap; }
 .sql-preview-error { margin: 9px 0 0; font-size: 11px; }
 .sql-preview-note { margin: 9px 0 0; color: #a0aca8; font-size: 10px; }
+.results-panel { margin-top: 18px; overflow: hidden; border: 1px solid #dfe9e4; border-radius: 9px; background: #fff; box-shadow: 0 3px 12px rgba(42, 83, 69, .03); }
+.results-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; color: #71817d; background: #f7faf8; font: 10px 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
+.results-heading strong { color: var(--mint-strong); font-weight: 500; }
+.results-table-wrap { overflow-x: auto; }
+.results-table { width: 100%; border-collapse: collapse; color: #354542; font-size: 12px; }
+.results-table th, .results-table td { max-width: 260px; padding: 10px 14px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; white-space: nowrap; }
+.results-table th { color: #71817d; background: #fbfdfc; font: 10px 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
+.results-table td { overflow: hidden; text-overflow: ellipsis; }
+.no-results { margin: 0; padding: 20px 14px; color: var(--muted); font-size: 12px; }
 .suggestions { margin-top: 55px; }
 .section-heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 16px; }
 .section-heading h2 { margin: 0; font-size: 13px; font-weight: 600; }
