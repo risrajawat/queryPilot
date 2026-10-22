@@ -171,10 +171,3 @@ scripts/                Database commands (seed-db.js, seed-turso.js)
 tests/                  Vitest unit and integration tests
 styles/                 Global styles for modern SaaS UI shell
 ```
-
-## Production / Docker
-
-```sh
-docker build -t querypilot .
-docker run --rm -p 3000:3000 -v "$(pwd)/data:/app/data" querypilot
-```
