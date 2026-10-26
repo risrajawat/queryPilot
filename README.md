@@ -1,173 +1,1058 @@
 # QueryPilot
 
-Phase 7A adds a deterministic synthetic commerce dataset and a read-only Database Explorer for the jury demo. QueryPilot tracks conversation state, analyzes intents, asks deterministic clarifying questions, produces validated SQLite `SELECT` queries, executes only resolved generated queries, and explains only the returned columns and rows. SQL is never accepted from the browser.
+### An AI SQL agent that knows when it doesn't understand your question.
 
-## Setup
+QueryPilot is a natural-language database assistant that lets users interact with structured data using plain English instead of writing SQL manually.
 
-Requirements: Node.js 20.11.1 (see `.nvmrc`) and npm.
+Instead of blindly converting every question into SQL, QueryPilot first understands the user's intent, detects ambiguity, asks clarification questions when necessary, generates a safe SQL query, validates it, executes it against the database, and explains the verified result in natural language.
 
-```sh
-cp .env.example .env
+> **Example:**  
+> **User:** "Show me the best customers."
+>
+> QueryPilot doesn't guess what "best" means.
+>
+> **QueryPilot:** "How would you like to rank customers?"
+> - Highest total revenue
+> - Most orders
+> - Most recent purchases
+>
+> After the user chooses a metric, QueryPilot generates and executes the appropriate query.
+
+---
+
+## Why QueryPilot?
+
+Natural-language-to-SQL systems often have a fundamental problem:
+
+**The user may ask something that has multiple valid interpretations.**
+
+For example:
+
+```text
+Show me the best customers.
+```
+
+"Best" could mean:
+
+- Highest revenue
+- Most purchases
+- Most recent activity
+- Highest average order value
+
+A system that immediately generates SQL has to guess.
+
+QueryPilot takes a different approach:
+
+```text
+Natural Language
+       ↓
+Understand Intent
+       ↓
+Detect Ambiguity
+       ↓
+Ask Clarification
+       ↓
+Resolve Intent
+       ↓
+Generate SQL
+       ↓
+Validate SQL
+       ↓
+Execute Safely
+       ↓
+Verify Results
+       ↓
+Explain Results
+```
+
+This makes the system more predictable, auditable, and safer than directly executing generated SQL.
+
+---
+
+# Core Features
+
+### 🧠 Natural-Language Querying
+
+Users can ask questions about the database using normal language.
+
+Examples:
+
+```text
+Show me the best customers.
+
+Which customers generated the most revenue?
+
+Show me customers with the most orders.
+
+Which products are currently in inventory?
+
+Show me recent orders.
+```
+
+---
+
+### 💬 Clarification Engine
+
+QueryPilot detects supported ambiguous requests instead of silently guessing.
+
+For example:
+
+```text
+User:
+Show me the best customers.
+
+QueryPilot:
+How would you like to rank customers?
+
+1. Highest total revenue
+2. Most orders
+3. Most recent purchases
+```
+
+The selected option becomes part of the resolved conversation intent.
+
+---
+
+### 🔍 Database Schema Introspection
+
+QueryPilot understands the database structure before generating SQL.
+
+The system introspects:
+
+- Tables
+- Columns
+- Data types
+- Primary keys
+- Foreign keys
+- Relationships
+- Nullability
+- Defaults
+
+This provides the SQL generation layer with a compact representation of the actual database schema.
+
+---
+
+### 🛡️ SQL Validation
+
+QueryPilot never accepts arbitrary SQL directly from the browser.
+
+Generated SQL passes through a validation layer that checks:
+
+- SQL is a `SELECT`
+- Only one statement is allowed
+- No comments
+- No mutation statements
+- No dangerous SQL operations
+- Tables exist
+- Columns exist
+- Identifiers are valid
+- Parameters are safely bound
+
+Operations such as:
+
+```sql
+DROP
+DELETE
+UPDATE
+INSERT
+ALTER
+CREATE
+ATTACH
+DETACH
+PRAGMA
+VACUUM
+```
+
+are rejected.
+
+---
+
+### ⚡ Safe SQL Execution
+
+Only server-generated and validated queries reach the database.
+
+The browser sends:
+
+```text
+conversation ID
+```
+
+The server then:
+
+```text
+Load conversation
+       ↓
+Resolve intent
+       ↓
+Generate SQL
+       ↓
+Validate SQL
+       ↓
+Execute SQL
+       ↓
+Return verified results
+```
+
+The browser never directly executes SQL.
+
+---
+
+### 📊 Database Explorer
+
+QueryPilot includes a read-only database explorer for inspecting the underlying demo dataset.
+
+It provides:
+
+- Available tables
+- Row counts
+- Table schemas
+- Column information
+- Sample records
+
+The explorer is schema-backed and does not expose an arbitrary SQL execution interface.
+
+---
+
+### 💡 Natural-Language Result Explanation
+
+After a query executes successfully, QueryPilot can explain the returned data in simple language.
+
+For example:
+
+```text
+The top customer generated ₹24,850 in revenue
+from 18 delivered orders.
+```
+
+The explanation is generated only from the verified query result.
+
+If there are no matching records:
+
+```text
+No results found for this query.
+```
+
+The actual result data remains available even if explanation generation fails.
+
+---
+
+# System Architecture
+
+```text
+                    ┌───────────────────┐
+                    │       User        │
+                    │ Natural Language  │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ Conversation      │
+                    │ State             │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ Intent Analysis   │
+                    └─────────┬─────────┘
+                              │
+                       Ambiguous?
+                        /       \
+                      Yes       No
+                      │          │
+                      ▼          │
+              ┌─────────────┐    │
+              │ Clarification│    │
+              │   Engine     │    │
+              └──────┬──────┘    │
+                     │            │
+                     └─────┬──────┘
+                           ▼
+                  ┌───────────────────┐
+                  │ Resolved Intent   │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ SQL Generator     │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ SQL Validator     │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Database Executor │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Verified Results  │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ Result Explainer  │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                    ┌─────────────────┐
+                    │      User       │
+                    │ Answer + Data   │
+                    └─────────────────┘
+```
+
+---
+
+# AI / Reasoning Architecture
+
+QueryPilot separates the reasoning layer from the core database execution pipeline.
+
+The application contains a provider abstraction:
+
+```text
+src/lib/ai/provider.js
+```
+
+The current production MVP uses a deterministic provider for supported query patterns.
+
+This means the critical SQL path does not depend on an external LLM API at runtime.
+
+The architecture is prepared for model-powered reasoning through:
+
+```text
+Gpt6AstraProvider
+```
+
+which is isolated behind the provider interface.
+
+The current adapter does not assume undocumented API endpoints or credentials.
+
+### Why this architecture?
+
+It allows the project to keep the database execution path:
+
+- Deterministic
+- Testable
+- Auditable
+- Safe
+
+while keeping the reasoning layer replaceable.
+
+The project was developed using OmniRush and GPT-6 Astra, while the current deployed MVP keeps the critical SQL workflow deterministic.
+
+---
+
+# Example Query Flow
+
+Consider:
+
+```text
+Show me the best customers.
+```
+
+### Step 1 — Intent Analysis
+
+QueryPilot recognizes this as:
+
+```text
+Intent:
+customer_ranking
+
+Status:
+ambiguous
+```
+
+### Step 2 — Clarification
+
+The system asks:
+
+```text
+How would you like to rank customers?
+
+• Highest total revenue
+• Most orders
+• Most recent purchases
+```
+
+### Step 3 — Intent Resolution
+
+If the user chooses:
+
+```text
+Highest total revenue
+```
+
+the intent becomes:
+
+```text
+customer_ranking
+metric: total_revenue
+```
+
+### Step 4 — SQL Generation
+
+The SQL generator creates a schema-aware query.
+
+### Step 5 — Validation
+
+The generated query is checked by the SQL validator.
+
+### Step 6 — Execution
+
+The validated query is executed against the database.
+
+### Step 7 — Result Verification
+
+The server returns the actual database rows.
+
+### Step 8 — Explanation
+
+QueryPilot converts the verified result into a human-readable explanation.
+
+---
+
+# Database Architecture
+
+QueryPilot supports separate database adapters for development and production.
+
+```text
+LOCAL DEVELOPMENT
+
+QueryPilot
+     │
+     ▼
+Database Adapter
+     │
+     ▼
+better-sqlite3
+     │
+     ▼
+Local SQLite Database
+```
+
+Production uses:
+
+```text
+VERCEL PRODUCTION
+
+QueryPilot
+     │
+     ▼
+Database Adapter
+     │
+     ▼
+@libsql/client
+     │
+     ▼
+Turso / libSQL
+```
+
+This keeps the application-level database interface consistent while allowing the production deployment to use persistent cloud storage.
+
+---
+
+# Demo Dataset
+
+QueryPilot includes a fully synthetic commerce dataset designed for demonstrations and testing.
+
+The database contains:
+
+| Table | Records |
+|---|---:|
+| Customers | 60 |
+| Categories | 9 |
+| Products | 36 |
+| Orders | 300 |
+| Order Items | 900 |
+| Payments | 300 |
+
+The dataset contains:
+
+- Repeat customers
+- Customers with no orders
+- Multiple countries
+- Different order statuses
+- Product categories
+- Inventory information
+- Realistic order relationships
+- Consistent foreign keys
+
+The dataset is completely synthetic and does not contain real customer information.
+
+The demo data also contains intentionally distinguishable ranking patterns so that different clarification choices produce visibly different results.
+
+---
+
+# Security Model
+
+Security is a core part of QueryPilot's architecture.
+
+### Browser → Server
+
+The browser does **not** send arbitrary SQL for execution.
+
+Instead, it sends a conversation identifier.
+
+### Server → SQL Generator
+
+The server retrieves the stored conversation and resolved intent.
+
+### SQL Generator → Validator
+
+The generated SQL is validated before execution.
+
+### Validator → Database
+
+Only a valid, read-only query reaches the database.
+
+```text
+Browser
+   │
+   │ conversation ID
+   ▼
+Server
+   │
+   ▼
+Intent
+   │
+   ▼
+SQL Generator
+   │
+   ▼
+SQL Validator
+   │
+   │ Valid SELECT only
+   ▼
+Database
+```
+
+This prevents the frontend from becoming an arbitrary SQL execution interface.
+
+---
+
+# Supported Query Types
+
+The current MVP supports deterministic patterns including:
+
+### Customer Ranking
+
+```text
+Customers by total revenue
+Customers by order count
+Customers by most recent purchase
+```
+
+### Customer Listing
+
+```text
+Show me all customers.
+```
+
+### Order Summaries
+
+```text
+Show me order summaries.
+```
+
+### Product / Inventory
+
+```text
+Show me product inventory.
+```
+
+Unsupported requests return a structured `unsupported_intent` response rather than guessing.
+
+---
+
+# Project Structure
+
+```text
+querypilot/
+│
+├── pages/
+│   ├── index.js
+│   └── api/
+│       ├── conversations/
+│       ├── explorer.js
+│       └── schema.js
+│
+├── src/
+│   └── lib/
+│       │
+│       ├── ai/
+│       │   └── provider.js
+│       │
+│       ├── conversation/
+│       │   ├── session-store.js
+│       │   ├── engine.js
+│       │   ├── intent-analysis.js
+│       │   └── clarification-engine.js
+│       │
+│       ├── db/
+│       │   ├── adapter.js
+│       │   ├── index.js
+│       │   ├── turso.js
+│       │   ├── schema-introspection.js
+│       │   ├── explorer.js
+│       │   └── seed.js
+│       │
+│       ├── sql/
+│       │   ├── generator.js
+│       │   ├── validator.js
+│       │   └── executor.js
+│       │
+│       └── results/
+│           └── explainer.js
+│
+├── scripts/
+│   ├── seed-db.js
+│   └── seed-turso.js
+│
+├── tests/
+│
+├── styles/
+│   └── globals.css
+│
+├── data/
+│   └── querypilot.sqlite
+│
+├── .nvmrc
+├── package.json
+└── README.md
+```
+
+### Responsibility of each layer
+
+| Layer | Responsibility |
+|---|---|
+| `conversation/` | Conversation state, intent detection and clarification |
+| `ai/` | Provider abstraction and reasoning boundary |
+| `db/` | Database connection, schema, introspection and data |
+| `sql/` | SQL generation, validation and execution |
+| `results/` | Verified result explanation |
+| `pages/api/` | Server-side API endpoints |
+| `tests/` | Automated testing |
+
+The architecture follows separation of concerns so that each part of the system has a clear responsibility.
+
+---
+
+# Getting Started
+
+## Requirements
+
+- Node.js `20.11.1`
+- npm
+
+Node version is pinned using:
+
+```text
+.nvmrc
+```
+
+---
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone <your-repository-url>
+cd querypilot
+```
+
+Install dependencies:
+
+```bash
 npm ci
+```
+
+Create the environment file:
+
+```bash
+cp .env.example .env
+```
+
+Seed the local database:
+
+```bash
 npm run db:seed
 ```
 
-`DB_PATH` controls the SQLite file and defaults to `data/querypilot.sqlite`.
+Start the development server:
 
-The seed is deterministic and creates 60 fictional customers, 9 categories, 36 products, 300 orders, 900 order items, and 300 payments. A fresh database therefore produces the same rows every time. Customer 1 is deliberately a high-value customer, customer 2 has the most delivered orders, and customer 3 has the most recent purchase so the clarification choices produce visibly different rankings.
-
-## Run
-
-```sh
+```bash
 npm run dev
 ```
 
-The health endpoint is available at `http://localhost:3000/api/health`.
+Open the application in your browser.
 
-The development schema endpoint is available at `http://localhost:3000/api/schema`. It returns full SQLite metadata and a compact schema representation without selecting application rows.
+---
 
-The read-only Database Explorer is available in the sidebar or at `http://localhost:3000` through the `Database Explorer` entry. It uses `GET /api/explorer` and `GET /api/explorer?table=customers` to display known table names, row counts, schema-backed columns, and at most 50 rows. It constructs all SQL on the server from the introspected schema; it does not accept arbitrary SQL and has no write operations.
+# Local Database
 
-### Conversation API
+The local SQLite database is controlled by:
 
-Start an in-memory conversation (the response includes the compact, row-free schema):
-
-```sh
-curl -X POST http://localhost:3000/api/conversations
+```env
+DB_PATH=data/querypilot.sqlite
 ```
 
-Send a message using the returned `conversation.id`:
+If `DB_PATH` is not specified, QueryPilot uses:
 
-```sh
-curl -X POST http://localhost:3000/api/conversations/<id>/messages \
-  -H 'content-type: application/json' \
-  -d '{"message":"Who are our best customers?"}'
+```text
+data/querypilot.sqlite
 ```
 
-The backend returns `intent`, `clarification`, `resolvedContext`, and the persisted conversation. “Best customers” deterministically asks whether to rank by highest total revenue, most orders, or most recent purchases. A follow-up such as “Highest revenue.” resolves to the `total_revenue` metric. Conversation storage is process-local and intended for this phase; no SQL is generated or executed.
+Seed the database with:
 
-The provider boundary is `src/lib/ai/provider.js`. `DeterministicProvider` is the offline fallback. `Gpt6AstraProvider` is an intentionally isolated future adapter; it does not make network calls or assume API behavior. Any future API key must remain server-side (for example, `GPT6_ASTRA_API_KEY` in the runtime environment).
-
-### SQL preview API
-
-After an intent is resolved, generate and validate a read-only query with:
-
-```sh
-curl -X POST http://localhost:3000/api/conversations/<id>/sql
+```bash
+npm run db:seed
 ```
 
-The endpoint uses the session's compact schema, current intent, resolved context, and messages. It rejects pending clarifications, unknown schema identifiers, comments, multiple statements, and all non-`SELECT` or mutating SQL. The response contains `sql`, parameter values, an explanation, and validator status; it does not run the query.
+---
 
-### SQL execution API
+# Turso / libSQL Production Setup
 
-After an intent is resolved, execute its generated query with:
+Vercel serverless functions should not rely on a local SQLite file for persistent production data.
 
-```sh
-curl -X POST http://localhost:3000/api/conversations/<id>/execute
+QueryPilot therefore supports Turso/libSQL for production.
+
+Create a Turso database:
+
+```bash
+turso db create querypilot
 ```
 
-The endpoint accepts only the conversation id. It rejects missing, pending, or unresolved sessions, generates and validates SQL server-side, and then runs it against the seeded SQLite database. The executor repeats the Phase 4 validator as its mandatory final security gate, accepts only safe bound parameters, returns JSON-safe `columns`, `rows`, and `rowCount`, and caps results at 100 rows. Database failures return a generic error without paths or stack traces.
+Get the database URL:
 
-Example successful response:
-
-```json
-{
-  "success": true,
-  "intent": { "name": "customer_ranking", "metric": "total_revenue" },
-  "columns": ["customer_id", "first_name", "last_name", "total_revenue"],
-  "rows": [{ "customer_id": 1, "first_name": "Maya", "last_name": "Chen", "total_revenue": 28337 }],
-  "rowCount": 1
-}
+```bash
+turso db show --url querypilot
 ```
 
-Supported intents are customer ranking by delivered-order revenue, order count, or latest purchase; customer listing; order summaries; and product inventory. Generation is deterministic for the offline MVP, schema-bound, and returns a structured `unsupported_intent` result when required identifiers are absent. User-supplied filter values are represented as `?` parameters rather than interpolated into SQL. Validation allows only one `SELECT`, rejects comments and write/admin/transaction statements, and checks referenced tables, aliases, and columns against the compact schema.
+Create an authentication token:
 
-Execution returns `{ columns, rows, rowCount }` with JSON-safe values and caps returned rows at 100. A valid query with no rows returns `success: true` and `rowCount: 0`; the UI displays `No results found.`. Validation failures return `reason: sql_validation_failed`, while database failures return the generic `reason: execution_error` without paths or stack traces. The execution layer repeats the Phase 4 validator as its mandatory security gate, and only server-generated, validated `SELECT` statements can execute.
-
-### Verified result explanation API
-
-After execution, the UI calls:
-
-```sh
-curl -X POST http://localhost:3000/api/conversations/<id>/explain
+```bash
+turso db tokens create querypilot
 ```
 
-The browser sends only the conversation ID. The server regenerates, validates, and executes the query through the existing Phase 5 path, then passes only the verified question, intent, columns, rows, and row count to `src/lib/results/explainer.js`. At most 20 verified rows are provided to the explanation provider; the actual result table remains unchanged. Empty results use `No results found for this query.`. If explanation fails, execution remains successful and the UI keeps the real results while showing that the explanation is unavailable.
+Configure:
 
-The initial UI is available at `http://localhost:3000`. The existing QueryPilot design can send questions, display conversation messages and clarification choices, show generated/validated/executed/explained status, render a concise verified explanation above each dynamic result table, and keep SQL details secondary. It does not execute SQL in the browser or display fabricated results.
+```env
+TURSO_DATABASE_URL=libsql://your-database-name.turso.io
+TURSO_AUTH_TOKEN=your-auth-token
+```
 
-## Test
+Seed the Turso database:
 
-```sh
+```bash
+npm run db:seed:turso
+```
+
+For Vercel, configure the same variables in the project's environment settings.
+
+After deployment, verify:
+
+```text
+/api/health
+/api/schema
+/api/explorer
+/api/explorer?table=customers
+```
+
+A healthy production database connection should report the Turso provider.
+
+---
+
+# API Overview
+
+## Health
+
+```http
+GET /api/health
+```
+
+Checks application/database availability.
+
+---
+
+## Schema
+
+```http
+GET /api/schema
+```
+
+Returns the introspected database schema.
+
+---
+
+## Database Explorer
+
+```http
+GET /api/explorer
+```
+
+Returns available tables and metadata.
+
+A specific table can be inspected with:
+
+```http
+GET /api/explorer?table=customers
+```
+
+The explorer is read-only and schema-backed.
+
+---
+
+## Create Conversation
+
+```http
+POST /api/conversations
+```
+
+Creates a new conversation.
+
+---
+
+## Send Message
+
+```http
+POST /api/conversations/<id>/messages
+```
+
+Processes the user's natural-language request and updates conversation state.
+
+---
+
+## SQL Preview
+
+```http
+POST /api/conversations/<id>/sql
+```
+
+Generates and validates SQL without executing it.
+
+Useful for development and debugging.
+
+---
+
+## Execute Query
+
+```http
+POST /api/conversations/<id>/execute
+```
+
+The server:
+
+1. Loads the conversation
+2. Resolves the intent
+3. Generates SQL
+4. Validates SQL
+5. Executes the query
+6. Returns verified results
+
+The browser cannot provide arbitrary SQL for execution.
+
+---
+
+## Explain Results
+
+```http
+POST /api/conversations/<id>/explain
+```
+
+Regenerates and verifies the query path, executes it, and produces a natural-language explanation from the verified result.
+
+---
+
+# Environment Variables
+
+For local SQLite development:
+
+```env
+DB_PATH=data/querypilot.sqlite
+```
+
+For Turso production:
+
+```env
+TURSO_DATABASE_URL=libsql://your-database-name.turso.io
+TURSO_AUTH_TOKEN=your-auth-token
+```
+
+The current deployed MVP does **not** require an external LLM API key for its deterministic runtime path.
+
+---
+
+# Testing
+
+Run the complete test suite:
+
+```bash
 npm test
 ```
 
-Tests use in-memory SQLite and do not require network access or a pre-existing database.
+The tests use in-memory databases where appropriate and do not require an existing production database or network connection.
 
-## Database Architecture
+Build the production application:
 
-QueryPilot uses a clean database abstraction supporting dual database targets:
+```bash
+npm run build
+```
+
+Both should pass before deployment.
+
+---
+
+# Design Principles
+
+QueryPilot is built around a few important principles:
+
+### 1. Don't Guess When Ambiguity Matters
+
+If a question has multiple meaningful interpretations, ask the user.
+
+### 2. Never Trust Browser SQL
+
+SQL is generated and validated on the server.
+
+### 3. Validate Before Execution
+
+Every generated query passes through the SQL validator.
+
+### 4. Use the Actual Schema
+
+SQL generation is based on introspected database structure.
+
+### 5. Explain Verified Data
+
+Result explanations are based on actual database results rather than fabricated values.
+
+### 6. Keep Critical Paths Deterministic
+
+The current MVP prioritizes predictable and auditable behavior for database operations.
+
+---
+
+# Current Status
+
+QueryPilot is a working MVP demonstrating an end-to-end natural-language database workflow:
 
 ```text
-LOCAL DEVELOPMENT:
-QueryPilot -> Database Abstraction -> better-sqlite3 -> Local SQLite file (data/querypilot.sqlite)
-
-VERCEL PRODUCTION:
-QueryPilot -> Database Abstraction -> @libsql/client -> Turso / libSQL cloud database
+Natural Language
+        ↓
+Intent Analysis
+        ↓
+Clarification
+        ↓
+Resolved Intent
+        ↓
+SQL Generation
+        ↓
+SQL Validation
+        ↓
+Safe Execution
+        ↓
+Verified Results
+        ↓
+Natural-Language Explanation
 ```
 
-### Local SQLite
+The application supports local SQLite development and Turso/libSQL production deployment.
 
-```sh
-npm run db:seed
-npm run dev
-```
+---
 
-### Vercel Production & Turso Setup
+# Future Improvements
 
-For serverless deployments (Vercel), local filesystem storage (`/var/task`) cannot be used. QueryPilot automatically connects to Turso when `TURSO_DATABASE_URL` is configured.
+Potential future improvements include:
 
-1. **Create Turso Database**:
-   ```sh
-   turso db create querypilot
-   turso db show --url querypilot
-   turso db tokens create querypilot
-   ```
+- Model-powered intent reasoning
+- More complex natural-language queries
+- Multi-table analytical queries
+- Advanced filtering and aggregation
+- Query history persistence
+- Streaming responses
+- Charts and visual analytics
+- User authentication
+- Persistent conversation storage
+- More advanced agentic planning
+- Support for additional database engines
 
-2. **Seed Turso Database**:
-   Add credentials to `.env.local`:
-   ```sh
-   TURSO_DATABASE_URL=libsql://your-database-name.turso.io
-   TURSO_AUTH_TOKEN=your-auth-token
-   ```
-   Run the seeding script:
-   ```sh
-   npm run db:seed:turso
-   ```
+These are intentionally separated from the current deterministic core so that the existing database execution path remains predictable and safe.
 
-3. **Configure Vercel Environment Variables**:
-   In Vercel Project Settings → Environment Variables:
-   - `TURSO_DATABASE_URL`: Your `libsql://...` database URL (Production & Preview)
-   - `TURSO_AUTH_TOKEN`: Your Turso authorization token (Production & Preview)
+---
 
-4. **Verify Deployment**:
-   - `GET /api/health` → `{"status":"ok","provider":"turso"}`
-   - `GET /api/explorer` → Lists tables and row counts
-   - `GET /api/explorer?table=customers` → Lists real customer records
+# Tech Stack
 
-## Project structure
+**Frontend**
+
+- Next.js
+- React
+- JavaScript
+- CSS
+
+**Backend**
+
+- Next.js API Routes
+- Node.js
+
+**Database**
+
+- SQLite
+- better-sqlite3
+- Turso / libSQL
+- @libsql/client
+
+**Architecture**
+
+- Intent analysis
+- Clarification engine
+- SQL generation
+- SQL validation
+- Safe query execution
+- Result explanation
+- Provider abstraction
+
+**Deployment**
+
+- Vercel
+- Turso
+
+---
+
+# Project Philosophy
+
+QueryPilot is not designed to be a system that simply does:
 
 ```text
-pages/                  Next.js pages and API routes
-src/lib/db/             Database abstraction, local SQLite, Turso client, schema, and seed data
-src/lib/db/adapter.js   Unified database adapter (SqliteAdapter and TursoAdapter)
-src/lib/db/turso.js     Turso / libSQL client, initialization, introspection, and queries
-src/lib/conversation/   Session state, intent analysis, clarification, and message engine
-src/lib/sql/            SQL generation, validation, and read-only execution
-src/lib/results/        Verified-result explanation with deterministic fallback
-src/lib/db/explorer.js  Read-only schema-backed table previews
-src/lib/ai/             Server-side provider abstraction and deterministic fallback
-scripts/                Database commands (seed-db.js, seed-turso.js)
-tests/                  Vitest unit and integration tests
-styles/                 Global styles for modern SaaS UI shell
+Question → LLM → SQL → Database
 ```
+
+Instead, the goal is:
+
+```text
+Question
+   ↓
+Understand
+   ↓
+Clarify
+   ↓
+Plan
+   ↓
+Generate
+   ↓
+Validate
+   ↓
+Execute
+   ↓
+Verify
+   ↓
+Explain
+```
+
+The central idea is simple:
+
+> **When an AI system doesn't understand what the user means, it should ask instead of guessing.**
+
+---
